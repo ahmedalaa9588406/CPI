@@ -79,7 +79,7 @@ const PM10MonitoringStations: React.FC = () => {
         >
           <option value="">Select PM10 Level</option>
           <option value="greater_or_equal_48">≥ 48 μg/m³</option>
-          <option value="between_32_and_48">≥ 32 μg/m³ and < 48 μg/m³</option>
+          <option value="between_32_and_48">≥ 32 μg/m³ and &lt; 48 μg/m³</option>
           <option value="less_than_32">{`< 32 μg/m³`}</option>
         </select>
       </div>
