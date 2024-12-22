@@ -1,12 +1,11 @@
-"use client"
-import React from 'react'
-import { useRouter } from "next/navigation"; 
+"use client"; // Ensures the page is treated as a client-side component
+import React from "react";
+import { useRouter } from "next/navigation";
 
-
-export function CardWithForm() {
+const HomePage = () => {
   const router = useRouter();
 
-  const handleCardClick = (id:number) => {
+  const handleCardClick = (id: number) => {
     // Static navigation based on the card clicked
     if (id === 1) {
       router.push("/home/P");
@@ -18,8 +17,7 @@ export function CardWithForm() {
       router.push("/home/ESI");
     } else if (id === 5) {
       router.push("/home/ES");
-    }
-    else if (id === 6) {
+    } else if (id === 6) {
       router.push("/home/UGL");
     }
   };
@@ -31,10 +29,10 @@ export function CardWithForm() {
         <div className="grid grid-cols-1 gap-8">
           {/* First row with three cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Productivity Index*/}
+            {/* Productivity Index */}
             <div
               className="relative group bg-white shadow-md rounded-lg overflow-hidden transition-transform transform hover:scale-105 cursor-pointer"
-              onClick={() => handleCardClick(1)} // Static navigation on click
+              onClick={() => handleCardClick(1)}
             >
               <div className="flex flex-col items-center p-6">
                 <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
@@ -47,7 +45,7 @@ export function CardWithForm() {
             {/* Infrastructure Index */}
             <div
               className="relative group bg-white shadow-md rounded-lg overflow-hidden transition-transform transform hover:scale-105 cursor-pointer"
-              onClick={() => handleCardClick(2)} // Static navigation on click
+              onClick={() => handleCardClick(2)}
             >
               <div className="flex flex-col items-center p-6">
                 <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
@@ -60,7 +58,7 @@ export function CardWithForm() {
             {/* Quality of Life Index */}
             <div
               className="relative group bg-white shadow-md rounded-lg overflow-hidden transition-transform transform hover:scale-105 cursor-pointer"
-              onClick={() => handleCardClick(3)} // Static navigation on click
+              onClick={() => handleCardClick(3)}
             >
               <div className="flex flex-col items-center p-6">
                 <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
@@ -71,44 +69,44 @@ export function CardWithForm() {
             </div>
           </div>
 
-          {/* Second row with two centered cards */}
+          {/* Second row with three cards */}
           <div className="flex justify-center gap-8">
-            {/* Equity and Social Inclusion Index  */}
+            {/* Equity and Social Inclusion Index */}
             <div
               className="relative group bg-white shadow-md rounded-lg overflow-hidden transition-transform transform hover:scale-105 cursor-pointer"
-              onClick={() => handleCardClick(4)} // Static navigation on click
+              onClick={() => handleCardClick(4)}
             >
               <div className="flex flex-col items-center p-6">
                 <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
                   4
                 </div>
-                <h4 className="text-lg font-bold text-gray-800 mb-2">Equity and Social Inclusion Index </h4>
+                <h4 className="text-lg font-bold text-gray-800 mb-2">Equity and Social Inclusion Index</h4>
               </div>
             </div>
 
-            {/* Environmental Sustainability Index  */}
+            {/* Environmental Sustainability Index */}
             <div
               className="relative group bg-white shadow-md rounded-lg overflow-hidden transition-transform transform hover:scale-105 cursor-pointer"
-              onClick={() => handleCardClick(5)} // Static navigation on click
+              onClick={() => handleCardClick(5)}
             >
               <div className="flex flex-col items-center p-6">
                 <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
                   5
                 </div>
-                <h4 className="text-lg font-bold text-gray-800 mb-2">Environmental Sustainability Index </h4>
+                <h4 className="text-lg font-bold text-gray-800 mb-2">Environmental Sustainability Index</h4>
               </div>
             </div>
 
-            {/* Governance and Legislation Index  */}
+            {/* Governance and Legislation Index */}
             <div
               className="relative group bg-white shadow-md rounded-lg overflow-hidden transition-transform transform hover:scale-105 cursor-pointer"
-              onClick={() => handleCardClick(6)} // Static navigation on click
+              onClick={() => handleCardClick(6)}
             >
               <div className="flex flex-col items-center p-6">
                 <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
                   6
                 </div>
-                <h4 className="text-lg font-bold text-gray-800 mb-2">Governance and Legislation Index </h4>
+                <h4 className="text-lg font-bold text-gray-800 mb-2">Governance and Legislation Index</h4>
               </div>
             </div>
           </div>
@@ -116,6 +114,6 @@ export function CardWithForm() {
       </div>
     </div>
   );
-}
+};
 
-export default CardWithForm;
+export default HomePage;
