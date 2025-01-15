@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const MeanHouseholdIncomeApp: React.FC = () => {
   const [householdIncome, setHouseholdIncome] = useState<number | undefined>(); // Allow undefined for no fixed zero value
   const [standardizedIncome, setStandardizedIncome] = useState<number>(0);
   const [decision, setDecision] = useState<string>("");
+  const [economicStrength, setEconomicStrength] = useState<number>(0);
 
   const minIncome = 6315; // Minimum income
   const maxIncome = 44773; // Maximum income
@@ -31,6 +32,17 @@ const MeanHouseholdIncomeApp: React.FC = () => {
       setDecision("Bad");
     }
   };
+
+  useEffect(() => {
+    // Fetch the values from localStorage and calculate the economic strength
+    const cityProductPerCapita = parseFloat(localStorage.getItem("cityProductPerCapita") || "0");
+    const oldAgeDependencyRatio = parseFloat(localStorage.getItem("oldAgeDependencyRatio") || "0");
+
+    const values = [cityProductPerCapita, oldAgeDependencyRatio, householdIncome ?? 0].filter((value): value is number => value > 0);
+    const average = values.reduce((acc: number, value: number) => acc + value, 0) / values.length;
+
+    setEconomicStrength(average);
+  }, [householdIncome]);
 
   return (
     <div className="max-w-md mx-auto p-5 bg-white shadow-md rounded-lg">
@@ -62,6 +74,7 @@ const MeanHouseholdIncomeApp: React.FC = () => {
             Standardized Income: {standardizedIncome.toFixed(2)}
           </h2>
           <h2 className="text-lg font-semibold">Decision: {decision}</h2>
+          <h2 className="text-lg font-semibold">Economic Strength: {economicStrength.toFixed(2)}</h2>
         </div>
       )}
     </div>

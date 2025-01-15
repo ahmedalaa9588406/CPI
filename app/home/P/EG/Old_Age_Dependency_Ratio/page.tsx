@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const OldAgeDependencyCalculator: React.FC = () => {
   const [peopleOver65, setPeopleOver65] = useState<number | undefined>();
@@ -7,6 +7,7 @@ const OldAgeDependencyCalculator: React.FC = () => {
   const [oldAgeDependencyRatio, setOldAgeDependencyRatio] = useState<number>(0);
   const [standardizedRatio, setStandardizedRatio] = useState<number>(0);
   const [decision, setDecision] = useState<string>("");
+  const [economicStrength, setEconomicStrength] = useState<number>(0);
 
   const minLogValue = Math.log(2.92); // Minimum log value
   const maxLogValue = Math.log(40.53); // Maximum log value
@@ -40,6 +41,17 @@ const OldAgeDependencyCalculator: React.FC = () => {
       setDecision("Good");
     }
   };
+
+  useEffect(() => {
+    // Fetch the values from localStorage and calculate the economic strength
+    const cityProductPerCapita = parseFloat(localStorage.getItem("cityProductPerCapita") || "0");
+    const meanHouseholdIncome = parseFloat(localStorage.getItem("meanHouseholdIncome") || "0");
+
+    const values = [cityProductPerCapita, oldAgeDependencyRatio, meanHouseholdIncome].filter(value => value > 0);
+    const average = values.reduce((acc, value) => acc + value, 0) / values.length;
+
+    setEconomicStrength(average);
+  }, [oldAgeDependencyRatio]);
 
   return (
     <div className="max-w-md mx-auto p-5 bg-white shadow-md rounded-lg">
@@ -83,6 +95,7 @@ const OldAgeDependencyCalculator: React.FC = () => {
             Standardized Ratio: {standardizedRatio.toFixed(2)}
           </h2>
           <h2 className="text-lg font-semibold">Decision: {decision}</h2>
+          <h2 className="text-lg font-semibold">Economic Strength: {economicStrength.toFixed(2)}</h2>
         </div>
       )}
     </div>

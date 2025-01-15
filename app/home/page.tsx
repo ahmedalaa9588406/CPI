@@ -35,9 +35,7 @@ const HomePage = () => {
               onClick={() => handleCardClick(1)}
             >
               <div className="flex flex-col items-center p-6">
-                <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                  1
-                </div>
+                <img src="/assets/Screenshot 2025-01-12 212420.png" alt="Productivity Index" className="w-16 h-16 mb-4 shadow-lg rounded-full" />
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Productivity Index</h4>
               </div>
             </div>
@@ -48,9 +46,8 @@ const HomePage = () => {
               onClick={() => handleCardClick(2)}
             >
               <div className="flex flex-col items-center p-6">
-                <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                  2
-                </div>
+              <img src="/assets/infrastructure.png" alt="Infrastructure Index" className="w-16 h-16 mb-4 shadow-lg rounded-full" />
+
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Infrastructure Index</h4>
               </div>
             </div>
@@ -61,9 +58,7 @@ const HomePage = () => {
               onClick={() => handleCardClick(3)}
             >
               <div className="flex flex-col items-center p-6">
-                <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                  3
-                </div>
+              <img src="/assets/quality.png" alt="Quality of Life Index" className="w-16 h-16 mb-4 shadow-lg rounded-full" />
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Quality of Life Index</h4>
               </div>
             </div>
@@ -77,9 +72,8 @@ const HomePage = () => {
               onClick={() => handleCardClick(4)}
             >
               <div className="flex flex-col items-center p-6">
-                <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                  4
-                </div>
+              <img src="/assets/equality.png" alt="Equity and Social Inclusion Index" className="w-16 h-16 mb-4 shadow-lg rounded-full" />
+
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Equity and Social Inclusion Index</h4>
               </div>
             </div>
@@ -90,9 +84,8 @@ const HomePage = () => {
               onClick={() => handleCardClick(5)}
             >
               <div className="flex flex-col items-center p-6">
-                <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                  5
-                </div>
+              <img src="/assets/environment.png" alt="Environmental Sustainability Index" className="w-16 h-16 mb-4 shadow-lg rounded-full" />
+
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Environmental Sustainability Index</h4>
               </div>
             </div>
@@ -103,9 +96,7 @@ const HomePage = () => {
               onClick={() => handleCardClick(6)}
             >
               <div className="flex flex-col items-center p-6">
-                <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                  6
-                </div>
+              <img src="/assets/Urban.png" alt="Governance and Legislation Index" className="w-16 h-16 mb-4 shadow-lg rounded-full" />
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Governance and Legislation Index</h4>
               </div>
             </div>

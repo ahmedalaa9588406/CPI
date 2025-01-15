@@ -16,6 +16,7 @@ export async function POST(request: Request) {
         sufficient_living: 0,
         population: 0,
         electricity: 0,
+        house_Infrastructure: 0, // Add the required property
       },
     });
 
