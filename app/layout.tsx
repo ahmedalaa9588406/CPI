@@ -9,6 +9,7 @@ import {
   UserButton
 } from '@clerk/nextjs';
 import Image from 'next/image';
+import Link from "next/link";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -38,7 +39,7 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
             <div className="flex justify-between items-center p-4">
-            <a href="/">
+            <Link href="/">
               <Image 
                 src="/assets/AI_PAT.jpg" 
                 alt="AI PAT" 
@@ -47,7 +48,7 @@ export default function RootLayout({
                 className="rounded-full"
                 draggable={false}
               />
-            </a>
+            </Link>
             <div>
               <SignedOut>
               <SignInButton />
