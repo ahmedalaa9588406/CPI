@@ -15,6 +15,7 @@ datasource db {
 
 model HouseInfrastructure {
   id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String
   improved_shelter    Float
   improved_water      Float
   improved_sanitation Float
@@ -28,6 +29,7 @@ model HouseInfrastructure {
 
 model EconomicStrength {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   city_product_per_capita Float
   old_age_dependency_ratio Float
   mean_household_income   Float
@@ -38,6 +40,7 @@ model EconomicStrength {
 
 model EconomicAgglomeration {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   economic_density        Float
   economic_specialization Float
   economic_agglomeration  Float
@@ -47,6 +50,7 @@ model EconomicAgglomeration {
 
 model Employment {
   id                          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                      String
   unemployment_rate           Float
   employment_to_population_ratio Float
   informal_employment         Float
@@ -57,6 +61,7 @@ model Employment {
 
 model SocialInfrastructure {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   physician_density       Float
   number_of_public_libraries Int
   social_infrastructure   Float
@@ -66,6 +71,7 @@ model SocialInfrastructure {
 
 model InformationAndCommunicationTechnology {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   internet_access         Float
   home_computer_access    Float
   average_broadband_speed Float
@@ -76,6 +82,7 @@ model InformationAndCommunicationTechnology {
 
 model UrbanMobility {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   use_of_public_transport Float
   average_daily_travel_time Float
   length_of_mass_transport_network Float
@@ -88,6 +95,7 @@ model UrbanMobility {
 
 model UrbanForm {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   street_intersection_density Float
   street_density          Float
   land_allocated_to_streets Float
@@ -98,6 +106,7 @@ model UrbanForm {
 
 model Health {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   life_expectancy_at_birth Float
   under_five_mortality_rate Float
   vaccination_coverage     Float
@@ -109,6 +118,7 @@ model Health {
 
 model Education {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   literacy_rate           Float
   mean_years_of_schooling Float
   early_childhood_education Float
@@ -120,6 +130,7 @@ model Education {
 
 model SafetyAndSecurity {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   homicide_rate           Float
   theft_rate              Float
   safety_and_security     Float
@@ -129,6 +140,7 @@ model SafetyAndSecurity {
 
 model PublicSpace {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   accessibility_to_open_public_areas Float
   green_area_per_capita   Float
   public_space            Float
@@ -138,6 +150,7 @@ model PublicSpace {
 
 model EconomicEquity {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   gini_coefficient        Float
   poverty_rate            Float
   economic_equity         Float
@@ -147,6 +160,7 @@ model EconomicEquity {
 
 model SocialInclusion {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   slums_households        Float
   youth_unemployment      Float
   social_inclusion        Float
@@ -156,6 +170,7 @@ model SocialInclusion {
 
 model GenderInclusion {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   equitable_secondary_school_enrollment Float
   women_in_local_government Float
   women_in_local_work_force Float
@@ -166,6 +181,7 @@ model GenderInclusion {
 
 model UrbanDiversity {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   land_use_mix            Float
   urban_diversity         Float
   createdAt               DateTime @default(now())
@@ -174,6 +190,7 @@ model UrbanDiversity {
 
 model AirQuality {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   number_of_monitoring_stations Float
   pm25_concentration      Float
   co2_emissions           Float
@@ -184,6 +201,7 @@ model AirQuality {
 
 model WasteManagement {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   solid_waste_collection  Float
   waste_water_treatment   Float
   solid_waste_recycling_share Float
@@ -194,6 +212,7 @@ model WasteManagement {
 
 model SustainableEnergy {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   share_of_renewable_energy Float
   sustainable_energy      Float
   createdAt               DateTime @default(now())
@@ -202,6 +221,7 @@ model SustainableEnergy {
 
 model Participation {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   voter_turnout           Float
   access_to_public_information Float
   civic_participation     Float
@@ -212,6 +232,7 @@ model Participation {
 
 model MunicipalFinancingAndInstitutionalCapacity {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   own_revenue_collection  Float
   days_to_start_a_business Float
   subnational_debt        Float
@@ -223,6 +244,7 @@ model MunicipalFinancingAndInstitutionalCapacity {
 
 model GovernanceOfUrbanization {
   id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String
   land_use_efficiency     Float
   governance_of_urbanization Float
   createdAt               DateTime @default(now())
