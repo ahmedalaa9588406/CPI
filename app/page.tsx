@@ -10,27 +10,33 @@ export const metadata:Metadata={
 
 export default function WelcomePage() {
   return (
-    <main className="flex justify-center items-center min-h-screen">
+    <main className="flex justify-center items-center min-h-screen animate-fadeIn">
       <div className="flex flex-col md:flex-row gap-12 m-8">
         
-        <div className="flex justify-center ">
+        <div className="flex justify-center animate-bounce-slow">
           <Image 
-          src="/assets/pixelcut-export.png" 
-          className="w-48 h-48 sm:w-64 sm:h-64 md:w-128 md:h-128" 
-          alt="city icon" 
-          width={200} 
-          height={200}
-          draggable={false}
+            src="/assets/pixelcut-export.png" 
+            className="w-48 h-48 sm:w-64 sm:h-64 md:w-128 md:h-128 transition-transform hover:scale-105" 
+            alt="city icon" 
+            width={200} 
+            height={200}
+            draggable={false}
           />
         </div>
         
         <div className="flex flex-col justify-around gap-6">
-          <h1 className="text-lg sm:text-xl md:text-4xl font-jura font-bold">AI-PAT</h1>
+          <h1 className="text-lg sm:text-xl md:text-4xl font-jura font-bold animate-pulse">AI-PAT</h1>
           <div className="">
             <Link href="/home" className="flex justify-center">
-              <Button variant="outline" className="w-3/4 sm:w-2/3 rounded-full border-none text-lg sm:text-xl">Let&apos;s start</Button>
+                <Button 
+                variant="outline" 
+                className="w-full sm:w-3/4 rounded-full border-none text-xl sm:text-2xl
+                      transition-all duration-300 hover:scale-105 hover:shadow-lg
+                      hover:bg-primary hover:text-primary-foreground"
+                >
+                Let&apos;s start
+                </Button>
             </Link>
-            
           </div>
         </div>
 

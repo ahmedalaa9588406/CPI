@@ -10,6 +10,7 @@ import {
 } from '@clerk/nextjs';
 import Image from 'next/image';
 import Link from "next/link";
+import FloatingButton from '@/components/FloatingButton';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -59,6 +60,7 @@ export default function RootLayout({
             </div>
             </div>
           {children}
+          <FloatingButton />
         </body>
       </html>
     </ClerkProvider>
