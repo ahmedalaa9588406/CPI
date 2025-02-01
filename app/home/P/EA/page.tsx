@@ -24,9 +24,13 @@ function CardSlider() {
             onClick={() => handleCardClick(1)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                1
-              </div>
+                <div className="w-16 h-16 bg-white flex items-center justify-center rounded-full mb-4 shadow-lg overflow-hidden">
+                <img 
+                  src="/assets/8194017.png"
+                  alt="Economic Density Icon"
+                  className="w-12 h-12 object-cover rounded-full"
+                />
+                </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">Economic Density</h4>
             </div>
           </div>
@@ -37,8 +41,12 @@ function CardSlider() {
             onClick={() => handleCardClick(2)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                2
+              <div className="w-16 h-16 bg-white flex items-center justify-center rounded-full mb-4 shadow-lg overflow-hidden">
+                <img 
+                src="/assets/download.png"
+                alt="Economic Specialization Icon"
+                className="w-12 h-12 object-cover rounded-full"
+                />
               </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">Economic Specialization</h4>
             </div>

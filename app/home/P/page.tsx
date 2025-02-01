@@ -26,9 +26,13 @@ function CardSlider() {
             onClick={() => handleCardClick(1)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                1
-              </div>
+                <div className="w-16 h-16 bg-blue-100 rounded-full p-3 mb-4 shadow-lg transform transition-all duration-300 group-hover:shadow-xl group-hover:bg-blue-200">
+                  <img 
+                  src="/assets/economic_strength.png" 
+                  alt="Economic Strength" 
+                  className="w-full h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">Economic Strength</h4>
             </div>
           </div>
@@ -39,9 +43,13 @@ function CardSlider() {
             onClick={() => handleCardClick(2)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                2
-              </div>
+                <div className="w-16 h-16 bg-blue-100 rounded-full p-3 mb-4 shadow-lg transform transition-all duration-300 group-hover:shadow-xl group-hover:bg-blue-200">
+                <img 
+                src="/assets/economic_aggregation.png" 
+                alt="Economic Agglomeration" 
+                className="w-full h-full object-contain rounded-full filter drop-shadow-md group-hover:scale-110 transition-transform duration-300"
+                />
+                </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">Economic Agglomeration</h4>
             </div>
           </div>
@@ -52,8 +60,12 @@ function CardSlider() {
             onClick={() => handleCardClick(3)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                3
+              <div className="w-16 h-16 bg-blue-100 rounded-full p-3 mb-4 shadow-lg transform transition-all duration-300 group-hover:shadow-xl group-hover:bg-blue-200">
+                <img 
+                src="/assets/Employment-Logo-PNG-HD-Quality.png" 
+                alt="Employment" 
+                className="w-full h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300"
+                />
               </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">Employment</h4>
             </div>

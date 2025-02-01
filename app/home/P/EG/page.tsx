@@ -26,9 +26,13 @@ function CardSlider() {
             onClick={() => handleCardClick(1)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                1
-              </div>
+                <div className="w-16 h-16 flex items-center justify-center mb-4">
+                <img 
+                  src="/assets/1999149.png"
+                  alt="City Product Icon"
+                  className="w-full h-full object-contain hover:scale-110 transition-transform duration-300"
+                />
+                </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">City Product per capita</h4>
             </div>
           </div>
@@ -39,9 +43,13 @@ function CardSlider() {
             onClick={() => handleCardClick(2)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                2
-              </div>
+                <div className="w-16 h-16 flex items-center justify-center mb-4">
+                <img 
+                src="/assets/pensions_policy.webp"
+                alt="Pensions Policy Icon"
+                className="w-full h-full object-contain hover:scale-110 transition-transform duration-300 rounded-full"
+                />
+                </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">Old Age Dependency Ratio </h4>
             </div>
           </div>
@@ -52,8 +60,12 @@ function CardSlider() {
             onClick={() => handleCardClick(3)}
           >
             <div className="flex flex-col items-center p-6">
-              <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
-                3
+              <div className="w-16 h-16 flex items-center justify-center mb-4">
+                <img 
+                src="/assets/family-at-house-icon-isolated-illustration-free-vector.jpg"
+                alt="Mean Household Income Icon"
+                className="w-full h-full object-contain hover:scale-110 transition-transform duration-300 rounded-full"
+                />
               </div>
               <h4 className="text-lg font-bold text-gray-800 mb-2">Mean Household Income</h4>
             </div>
