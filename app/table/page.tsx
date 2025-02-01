@@ -217,6 +217,684 @@ export default function ContentTable() {
   const [calculationData, setCalculationData] = useState<CalculationData | null>(null);
   const { isLoaded, userId } = useAuth();
 
+  const calculateHouseInfrastructureAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "improved_shelter",
+      "improved_water",
+      "improved_sanitation",
+      "sufficient_living",
+      "population",
+      "electricity"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the house_Infrastructure value in calculationData
+    if (data) {
+      data.house_Infrastructure = average;
+    }
+    
+    return average;
+  };
+
+  const calculateEconomicStrengthAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "city_product_per_capita",
+      "old_age_dependency_ratio",
+      "mean_household_income"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the economic_strength value in calculationData
+    if (data) {
+      data.economic_strength = average;
+    }
+    
+    return average;
+  };
+
+  const calculateEconomicAgglomerationAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "economic_density",
+      "economic_specialization"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the economic_agglomeration value in calculationData
+    if (data) {
+      data.economic_agglomeration = average;
+    }
+    
+    return average;
+  };
+
+  const calculateEmploymentAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "unemployment_rate",
+      "employment_to_population_ratio",
+      "informal_employment"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the employment value in calculationData
+    if (data) {
+      data.employment = average;
+    }
+    
+    return average;
+  };
+
+  const calculateSocialInfrastructureAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "physician_density",
+      "number_of_public_libraries"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the social_infrastructure value in calculationData
+    if (data) {
+      data.social_infrastructure = average;
+    }
+    
+    return average;
+  };
+
+  const calculateUrbanMobilityAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "use_of_public_transport",
+      "average_daily_travel_time",
+      "length_of_mass_transport_network",
+      "traffic_fatalities",
+      "affordability_of_transport"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the urban_mobility value in calculationData
+    if (data) {
+      data.urban_mobility = average;
+    }
+    
+    return average;
+  };
+
+  const calculateUrbanFormAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "street_intersection_density",
+      "street_density",
+      "land_allocated_to_streets"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the urban_form value in calculationData
+    if (data) {
+      data.urban_form = average;
+    }
+    
+    return average;
+  };
+
+  const calculateHealthAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "life_expectancy_at_birth",
+      "under_five_mortality_rate",
+      "vaccination_coverage",
+      "maternal_mortality"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the health value in calculationData
+    if (data) {
+      data.health = average;
+    }
+    
+    return average;
+  };
+
+  const calculateEducationAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "literacy_rate",
+      "mean_years_of_schooling",
+      "early_childhood_education",
+      "net_enrollment_rate_in_higher_education"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the education value in calculationData
+    if (data) {
+      data.education = average;
+    }
+    
+    return average;
+  };
+
+  const calculateSafetyAndSecurityAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "homicide_rate",
+      "theft_rate"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the safety_and_security value in calculationData
+    if (data) {
+      data.safety_and_security = average;
+    }
+    
+    return average;
+  };
+
+  const calculatePublicSpaceAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "accessibility_to_open_public_areas",
+      "green_area_per_capita"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the public_space value in calculationData
+    if (data) {
+      data.public_space = average;
+    }
+    
+    return average;
+  };
+
+  const calculateEconomicEquityAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "gini_coefficient",
+      "poverty_rate"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the economic_equity value in calculationData
+    if (data) {
+      data.economic_equity = average;
+    }
+    
+    return average;
+  };
+
+  const calculateSocialInclusionAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "slums_households",
+      "youth_unemployment"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the social_inclusion value in calculationData
+    if (data) {
+      data.social_inclusion = average;
+    }
+    
+    return average;
+  };
+
+  const calculateGenderInclusionAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "equitable_secondary_school_enrollment",
+      "women_in_local_government",
+      "women_in_local_work_force"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the gender_inclusion value in calculationData
+    if (data) {
+      data.gender_inclusion = average;
+    }
+    
+    return average;
+  };
+
+  const calculateUrbanDiversityAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "land_use_mix"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the urban_diversity value in calculationData
+    if (data) {
+      data.urban_diversity = average;
+    }
+    
+    return average;
+  };
+
+  const calculateAirQualityAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "number_of_monitoring_stations",
+      "pm25_concentration",
+      "co2_emissions"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the air_quality value in calculationData
+    if (data) {
+      data.air_quality = average;
+    }
+    
+    return average;
+  };
+
+  const calculateWasteManagementAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "solid_waste_collection",
+      "waste_water_treatment",
+      "solid_waste_recycling_share"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the waste_management value in calculationData
+    if (data) {
+      data.waste_management = average;
+    }
+    
+    return average;
+  };
+
+  const calculateSustainableEnergyAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "share_of_renewable_energy"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the sustainable_energy value in calculationData
+    if (data) {
+      data.sustainable_energy = average;
+    }
+    
+    return average;
+  };
+
+  const calculateParticipationAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "voter_turnout",
+      "access_to_public_information",
+      "civic_participation"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the participation value in calculationData
+    if (data) {
+      data.participation = average;
+    }
+    
+    return average;
+  };
+
+  const calculateMunicipalFinancingAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "own_revenue_collection",
+      "days_to_start_a_business",
+      "subnational_debt",
+      "local_expenditure_efficiency"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the municipal_financing_and_institutional_capacity value in calculationData
+    if (data) {
+      data.municipal_financing_and_institutional_capacity = average;
+    }
+    
+    return average;
+  };
+
+  const calculateGovernanceAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "land_use_efficiency"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the governance_of_urbanization value in calculationData
+    if (data) {
+      data.governance_of_urbanization = average;
+    }
+    
+    return average;
+  };
+
+  const calculateICTAverage = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "internet_access",
+      "home_computer_access",
+      "average_broadband_speed"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the ict value in calculationData
+    if (data) {
+      data.ict = average;
+    }
+    
+    return average;
+  };
+
   useEffect(() => {
     const fetchCalculationHistory = async () => {
       if (!isLoaded || !userId) return;
@@ -230,7 +908,67 @@ export default function ContentTable() {
 
         if (response.ok) {
           const data = await response.json();
-          setCalculationData(data[0] || null);
+          if (data[0]) {
+            // Calculate all averages
+            const houseInfraAvg = calculateHouseInfrastructureAverage(data[0]);
+            const economicStrengthAvg = calculateEconomicStrengthAverage(data[0]);
+            const economicAgglomerationAvg = calculateEconomicAgglomerationAverage(data[0]);
+            const employmentAvg = calculateEmploymentAverage(data[0]);
+            const socialInfrastructureAvg = calculateSocialInfrastructureAverage(data[0]);
+            const urbanMobilityAvg = calculateUrbanMobilityAverage(data[0]);
+            const urbanFormAvg = calculateUrbanFormAverage(data[0]);
+            const healthAvg = calculateHealthAverage(data[0]);
+            const educationAvg = calculateEducationAverage(data[0]);
+            const safetyAndSecurityAvg = calculateSafetyAndSecurityAverage(data[0]);
+            const publicSpaceAvg = calculatePublicSpaceAverage(data[0]);
+            const economicEquityAvg = calculateEconomicEquityAverage(data[0]);
+            const socialInclusionAvg = calculateSocialInclusionAverage(data[0]);
+            const genderInclusionAvg = calculateGenderInclusionAverage(data[0]);
+            const urbanDiversityAvg = calculateUrbanDiversityAverage(data[0]);
+            const airQualityAvg = calculateAirQualityAverage(data[0]);
+            const wasteManagementAvg = calculateWasteManagementAverage(data[0]);
+            const sustainableEnergyAvg = calculateSustainableEnergyAverage(data[0]);
+            const participationAvg = calculateParticipationAverage(data[0]);
+            const municipalFinancingAvg = calculateMunicipalFinancingAverage(data[0]);
+            const governanceAvg = calculateGovernanceAverage(data[0]);
+            const ictAvg = calculateICTAverage(data[0]);
+            
+            data[0].house_Infrastructure = houseInfraAvg;
+            data[0].economic_strength = economicStrengthAvg;
+            data[0].economic_agglomeration = economicAgglomerationAvg;
+            data[0].employment = employmentAvg;
+            data[0].social_infrastructure = socialInfrastructureAvg;
+            data[0].urban_mobility = urbanMobilityAvg;
+            data[0].urban_form = urbanFormAvg;
+            data[0].health = healthAvg;
+            data[0].education = educationAvg;
+            data[0].safety_and_security = safetyAndSecurityAvg;
+            data[0].public_space = publicSpaceAvg;
+            data[0].economic_equity = economicEquityAvg;
+            data[0].social_inclusion = socialInclusionAvg;
+            data[0].gender_inclusion = genderInclusionAvg;
+            data[0].urban_diversity = urbanDiversityAvg;
+            data[0].air_quality = airQualityAvg;
+            data[0].waste_management = wasteManagementAvg;
+            data[0].sustainable_energy = sustainableEnergyAvg;
+            data[0].participation = participationAvg;
+            data[0].municipal_financing_and_institutional_capacity = municipalFinancingAvg;
+            data[0].governance_of_urbanization = governanceAvg;
+            data[0].ict = ictAvg;
+            
+            setCalculationData(data[0]);
+
+            // Save the updated values to the database
+            await fetch('/api/calculation-history', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(data[0]),
+            });
+          } else {
+            setCalculationData(null);
+          }
         } else {
           console.error('Failed to fetch calculation history');
         }
@@ -338,19 +1076,24 @@ export default function ContentTable() {
       </div>
 
       {/* Export Buttons */}
-      <div className="flex gap-4 mb-4">
-        <button 
-          onClick={exportToPDF}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Export to PDF
-        </button>
-        <button 
-          onClick={exportToExcel}
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Export to Excel
-        </button>
+      <div className="flex flex-col items-center gap-4 mb-4">
+        <div className="bg-blue-100 p-4 rounded-lg shadow-md">
+          
+        </div>
+        <div className="flex gap-4">
+          <button 
+            onClick={exportToPDF}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Export to PDF
+          </button>
+          <button 
+            onClick={exportToExcel}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Export to Excel
+          </button>
+        </div>
       </div>
 
       {/* Existing Table Section */}
