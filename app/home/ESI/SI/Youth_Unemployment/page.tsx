@@ -1,43 +1,91 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const YouthUnemploymentStandardization: React.FC = () => {
-  const [unemployedYouth, setUnemployedYouth] = useState<number | string>(""); // Input: number of unemployed young persons
-  const [youthLaborForce, setYouthLaborForce] = useState<number | string>(""); // Input: total youth labor force
+  const { user, isLoaded } = useUser();
+  const [unemployedYouth, setUnemployedYouth] = useState<number>(0);
+  const [youthLaborForce, setYouthLaborForce] = useState<number>(0);
   const [standardizedRate, setStandardizedRate] = useState<string | null>(null);
-  const [evaluation, setEvaluation] = useState<string | null>(null); // Decision evaluation
+  const [evaluation, setEvaluation] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Constants for benchmarks
+  // Constants for benchmarks and thresholds
   const MIN = 2.7; // Min = 2.7%
   const MAX = 62.8; // Max = 62.8%
+  const THRESHOLD_LOW = 1.28;
+  const THRESHOLD_HIGH = 2.82;
 
-  const calculateYouthUnemployment = () => {
-    const laborForceValue = parseFloat(youthLaborForce.toString());
-    if (laborForceValue <= 0) {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
+    // Validate inputs
+    if (youthLaborForce <= 0) {
       alert("Youth labor force must be greater than zero.");
       return;
     }
 
     // Youth Unemployment calculation
-    const unemploymentRate = (100 * parseFloat(unemployedYouth.toString())) / laborForceValue;
-    const fourthRootUnemployment = Math.pow(unemploymentRate, 1 / 4); // Fourth root
+    const unemploymentRate = 100 * (unemployedYouth / youthLaborForce);
+
+    // Fourth root of unemployment rate
+    const fourthRootUnemployment = Math.pow(unemploymentRate, 1 / 4);
+
+    // Standardized formula
+    const standardizedValue =
+      100 *
+      (1 -
+        (fourthRootUnemployment - Math.pow(MIN, 1 / 4)) /
+          (Math.pow(MAX, 1 / 4) - Math.pow(MIN, 1 / 4)));
 
     // Decision logic
-    if (fourthRootUnemployment >= Math.pow(2.82, 1 / 4)) {
-      setStandardizedRate("0");
-      setEvaluation("Bad");
-    } else if (fourthRootUnemployment > Math.pow(1.28, 1 / 4)) {
-      const standardized =
-        100 *
-        (1 -
-          (fourthRootUnemployment - Math.pow(MIN, 1 / 4)) /
-            (Math.pow(MAX, 1 / 4) - Math.pow(MIN, 1 / 4)));
-      setStandardizedRate(standardized.toFixed(2));
-      setEvaluation("Average");
+    let standardizedRateValue: number;
+    let evaluationComment: string;
+
+    if (fourthRootUnemployment >= Math.pow(THRESHOLD_HIGH, 1 / 4)) {
+      standardizedRateValue = 0;
+      evaluationComment = "Bad";
+    } else if (fourthRootUnemployment > Math.pow(THRESHOLD_LOW, 1 / 4) && fourthRootUnemployment < Math.pow(THRESHOLD_HIGH, 1 / 4)) {
+      standardizedRateValue = standardizedValue;
+      evaluationComment = "Average";
     } else {
-      setStandardizedRate("100");
-      setEvaluation("Good");
+      standardizedRateValue = 100;
+      evaluationComment = "Good";
+    }
+
+    setStandardizedRate(standardizedRateValue.toFixed(2));
+    setEvaluation(evaluationComment);
+
+    // Prepare data to send
+    const postData = {
+      youth_unemployment: unemploymentRate,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -52,34 +100,34 @@ const YouthUnemploymentStandardization: React.FC = () => {
         <input
           type="number"
           value={unemployedYouth}
-          onChange={(e) => setUnemployedYouth(e.target.value)}
+          onChange={(e) => setUnemployedYouth(parseFloat(e.target.value))}
           className="border rounded p-2 w-full"
           placeholder="Enter number of unemployed youth"
         />
       </div>
-
       <div className="mb-4">
         <label className="block mb-2 font-semibold">Youth Labor Force:</label>
         <input
           type="number"
           value={youthLaborForce}
-          onChange={(e) => setYouthLaborForce(e.target.value)}
+          onChange={(e) => setYouthLaborForce(parseFloat(e.target.value))}
           className="border rounded p-2 w-full"
           placeholder="Enter total youth labor force"
         />
       </div>
-
       <button
-        onClick={calculateYouthUnemployment}
-        className="p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Standardized Rate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Standardized Rate'}
       </button>
-
       {standardizedRate !== null && (
         <div className="mt-4">
           <h3 className="text-lg">
-            Standardized Youth Unemployment Rate: {standardizedRate}
+            Standardized Youth Unemployment Rate: {standardizedRate}%
           </h3>
           <h3 className="text-lg">
             Evaluation: {evaluation}

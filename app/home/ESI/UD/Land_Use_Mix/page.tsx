@@ -1,13 +1,15 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const LandUseMix: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [landUseData, setLandUseData] = useState<number[][]>([]); // Array of p_i values for each cell
   const [numCells, setNumCells] = useState<string>(""); // Total number of cells as a string to allow empty input
   const [averageIndex, setAverageIndex] = useState<number | null>(null); // Average Land Use Mix index
   const [standardizedScore, setStandardizedScore] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<string | null>(null); // Decision evaluation
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants
   const MAX_INDEX = 1.61; // ln(5) for 5 categories
@@ -20,7 +22,12 @@ const LandUseMix: React.FC = () => {
       .reduce((sum, pi) => sum + pi * Math.log(pi), 0);
   };
 
-  const calculateLandUseMix = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numCellsValue = parseInt(numCells, 10);
     if (isNaN(numCellsValue) || numCellsValue <= 0 || landUseData.length === 0) {
       alert("Ensure that land use data and a valid number of cells are provided.");
@@ -37,18 +44,51 @@ const LandUseMix: React.FC = () => {
 
     // Standardized formula
     const standardizedValue =
-      100 * (1 - (MAX_INDEX - average) / (MAX_INDEX - MIN_INDEX));
+      100 * (average / MAX_INDEX);
 
     // Decision logic
+    let standardizedScoreValue: string;
+    let evaluationComment: string;
     if (average >= MAX_INDEX) {
-      setStandardizedScore("100");
-      setEvaluation("Excellent");
+      standardizedScoreValue = "100";
+      evaluationComment = "Excellent";
     } else if (average > MIN_INDEX && average < MAX_INDEX) {
-      setStandardizedScore(standardizedValue.toFixed(2));
-      setEvaluation("Moderate");
-    } else if (average <= MIN_INDEX) {
-      setStandardizedScore("0");
-      setEvaluation("Poor");
+      standardizedScoreValue = standardizedValue.toFixed(2);
+      evaluationComment = "Moderate";
+    } else {
+      standardizedScoreValue = "0";
+      evaluationComment = "Poor";
+    }
+    setStandardizedScore(standardizedScoreValue);
+    setEvaluation(evaluationComment);
+
+    // Prepare data to send
+    const postData = {
+      land_use_mix: average,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -72,7 +112,6 @@ const LandUseMix: React.FC = () => {
           }
         />
       </div>
-
       <div className="mb-4">
         <label className="block mb-2 font-semibold">Total Number of Cells:</label>
         <input
@@ -83,14 +122,15 @@ const LandUseMix: React.FC = () => {
           placeholder="Enter a valid number"
         />
       </div>
-
       <button
-        onClick={calculateLandUseMix}
-        className="p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Land Use Mix
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Land Use Mix'}
       </button>
-
       {averageIndex !== null && (
         <div className="mt-4">
           <h3 className="text-lg">

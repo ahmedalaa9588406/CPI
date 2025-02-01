@@ -1,7 +1,9 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
 function ImprovedShelterForm() {
+  const { user, isLoaded } = useUser();
   const [durableHouseholds, setDurableHouseholds] = useState("");
   const [totalHouseholds, setTotalHouseholds] = useState("");
   const [result, setResult] = useState<string | null>(null);
@@ -14,64 +16,62 @@ function ImprovedShelterForm() {
   const MAX = 98.4;
 
   const calculateImprovedShelter = async () => {
+    if (!user) {
+      alert("Please sign in to save calculations");
+      return;
+    }
+
     const numericTotalHouseholds = Number(totalHouseholds);
     if (numericTotalHouseholds > 0) {
       const numericDurableHouseholds = Number(durableHouseholds);
-      const improvedShelter =
-        (numericDurableHouseholds / numericTotalHouseholds) * 100;
-
-      // Calculate Standardized Improved Shelter (S)
-      let standardizedImprovedShelter =
-        100 * ((improvedShelter - MIN) / (MAX - MIN));
-
-      // Cap at 100 if it exceeds, or set to 0 if it's below 0
-      if (standardizedImprovedShelter > 100) {
-        standardizedImprovedShelter = 100;
-      } else if (standardizedImprovedShelter < 0) {
-        standardizedImprovedShelter = 0;
-      }
+      const improvedShelter = (numericDurableHouseholds / numericTotalHouseholds) * 100;
+      const standardizedImprovedShelter = Math.min(Math.max(100 * ((improvedShelter - MIN) / (MAX - MIN)), 0), 100);
 
       setImprovedShelterS(standardizedImprovedShelter);
       setResult(improvedShelter.toFixed(2));
 
-      // Store the result in the database
       try {
         setIsSubmitting(true);
-        const response = await fetch('/api/house-infrastructure', {
+        const response = await fetch('/api/calculation-history', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             improved_shelter: improvedShelter,
+            userId: user.id
           }),
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-          throw new Error('Failed to store data');
+          throw new Error(data.error || 'Failed to store data');
         }
 
-        // Show success message or handle response as needed
-        console.log('Data stored successfully');
+        // Set decision after successful save
+        if (standardizedImprovedShelter >= 98.4) {
+          setDecision("Perfect");
+        } else if (standardizedImprovedShelter >= 84.8) {
+          setDecision("Good");
+        } else {
+          setDecision("Bad");
+        }
+
       } catch (error) {
         console.error('Error storing data:', error);
-        alert('Failed to store the calculation result');
+        alert('Failed to store the calculation result: ' + (error as Error).message);
       } finally {
         setIsSubmitting(false);
-      }
-
-      // Determine decision message
-      if (standardizedImprovedShelter >= 98.4) {
-        setDecision("Perfect");
-      } else if (standardizedImprovedShelter >= 84.8) {
-        setDecision("Good");
-      } else {
-        setDecision("Bad");
       }
     } else {
       alert("Total households must be greater than zero.");
     }
   };
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">

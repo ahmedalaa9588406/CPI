@@ -1,6 +1,6 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 interface LifeTableRow {
   age: string;
@@ -9,9 +9,11 @@ interface LifeTableRow {
 }
 
 function LifeExpectancyCalculator() {
+  const { user, isLoaded } = useUser();
   const [data, setData] = useState<LifeTableRow[]>([{ age: "", lx: "", tx: "" }]);
   const [lifeExpectancy, setLifeExpectancy] = useState<string | null>(null);
   const [standardizedScore, setStandardizedScore] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   const MIN_LIFE_EXPECTANCY = 49;
   const MAX_LIFE_EXPECTANCY = 83.48;
@@ -36,7 +38,12 @@ function LifeExpectancyCalculator() {
   };
 
   // Function to calculate life expectancy at birth
-  const calculateLifeExpectancy = () => {
+  const calculateLifeExpectancy = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     let t0 = 0; // Total years lived
     let l0 = 0; // Number of people alive at age 0
 
@@ -63,6 +70,35 @@ function LifeExpectancyCalculator() {
         )
       );
       setStandardizedScore(standardized.toFixed(2));
+
+      // Prepare data to send
+      const postData = {
+        life_expectancy_at_birth: e0,
+        userId: user.id,
+      };
+
+      try {
+        setIsSubmitting(true);
+        const response = await fetch('/api/calculation-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(postData),
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const result = await response.json();
+        console.log('Result:', result);
+        alert("Data calculated and saved successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('Error saving data:', errorMessage);
+        alert("Failed to save data. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       alert("Please ensure valid values for the number of people alive at age 0 (l0).");
     }
@@ -132,9 +168,12 @@ function LifeExpectancyCalculator() {
 
       <button
         onClick={calculateLifeExpectancy}
-        className="p-2 bg-green-500 text-white rounded w-full"
+        disabled={isSubmitting}
+        className={`p-2 bg-green-500 text-white rounded w-full hover:bg-green-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Life Expectancy
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Life Expectancy'}
       </button>
 
       {lifeExpectancy && (

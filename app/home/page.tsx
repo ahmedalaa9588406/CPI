@@ -23,7 +23,7 @@ const HomePage = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="flex flex-col justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="w-4/5 max-w-6xl">
         {/* Grid container for all cards */}
         <div className="grid grid-cols-1 gap-8">
@@ -103,6 +103,8 @@ const HomePage = () => {
           </div>
         </div>
       </div>
+      
+     
     </div>
   );
 };

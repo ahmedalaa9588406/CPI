@@ -1,22 +1,29 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const InformalEmploymentCalculator: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [informalEmployees, setInformalEmployees] = useState<number | undefined>();
   const [totalEmployedPersons, setTotalEmployedPersons] = useState<number | undefined>();
   const [informalEmployment, setInformalEmployment] = useState<number>(0); // Informal Employment Ratio
   const [standardizedInformalEmployment, setStandardizedInformalEmployment] = useState<number>(0); // Standardized Informal Employment
   const [decision, setDecision] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   const min = 11; // Minimum benchmark
   const max = 75; // Maximum benchmark
 
-  const calculateInformalEmployment = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     if (!totalEmployedPersons || totalEmployedPersons === 0) {
       alert("Total number of employed persons cannot be zero.");
       return;
     }
-
     if (!informalEmployees || informalEmployees < 0) {
       alert("Please enter a valid number of informal employees.");
       return;
@@ -27,7 +34,12 @@ const InformalEmploymentCalculator: React.FC = () => {
     setInformalEmployment(ratio);
 
     // Standardized Informal Employment Formula
-    const standardized = 100 * (1 - (Math.pow(ratio, 0.25) - Math.pow(min, 0.25)) / (Math.pow(max, 0.25) - Math.pow(min, 0.25)));
+    let standardized = 100 * (1 - (Math.pow(ratio, 0.25) - Math.pow(min, 0.25)) / (Math.pow(max, 0.25) - Math.pow(min, 0.25)));
+    if (standardized > 100) {
+      standardized = 100;
+    } else if (standardized < 0) {
+      standardized = 0;
+    }
     setStandardizedInformalEmployment(standardized);
 
     // Decision Logic
@@ -38,6 +50,35 @@ const InformalEmploymentCalculator: React.FC = () => {
     } else {
       setDecision("Good");
     }
+
+    // Prepare data to send
+    const postData = {
+      informal_employment: ratio,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -45,7 +86,7 @@ const InformalEmploymentCalculator: React.FC = () => {
       <h1 className="text-3xl font-bold mb-6 text-center">
         Informal Employment Calculator
       </h1>
-
+      
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Number of Informal Employees:
@@ -58,7 +99,6 @@ const InformalEmploymentCalculator: React.FC = () => {
           placeholder="Enter number of informal employees"
         />
       </div>
-
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Total Number of Employed Persons:
@@ -71,14 +111,15 @@ const InformalEmploymentCalculator: React.FC = () => {
           placeholder="Enter total number of employed persons"
         />
       </div>
-
       <button
-        onClick={calculateInformalEmployment}
-        className="p-4 bg-blue-600 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-4 bg-blue-600 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Informal Employment
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Informal Employment'}
       </button>
-
       {decision && (
         <div className="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner">
           <h2 className="text-xl font-semibold mb-4">

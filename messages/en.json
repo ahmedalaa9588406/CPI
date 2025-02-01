@@ -1,0 +1,15 @@
+{
+  "common": {
+    "calculate": "Calculate",
+    "save": "Save",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error"
+  },
+  "landUseMix": {
+    "title": "Land Use Mix",
+    "inputLabel": "Enter Land Use Data for Each Cell",
+    "totalCells": "Total Number of Cells",
+    "calculate": "Calculate Land Use Mix"
+  }
+}

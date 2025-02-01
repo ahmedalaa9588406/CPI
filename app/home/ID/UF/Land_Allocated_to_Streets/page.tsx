@@ -1,54 +1,96 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function LandAllocatedToStreetsCalculator() {
-  const [urbanSurfaceStreets, setUrbanSurfaceStreets] = useState("");
-  const [totalUrbanArea, setTotalUrbanArea] = useState("");
+  const { user, isLoaded } = useUser();
+  const [urbanSurfaceStreets, setUrbanSurfaceStreets] = useState<string>("");
+  const [totalUrbanArea, setTotalUrbanArea] = useState<string>("");
   const [allocatedPercentage, setAllocatedPercentage] = useState<number | null>(null);
   const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants
   const MIN = 6; // Minimum benchmark percentage
   const MAX = 36; // Maximum benchmark percentage
 
-  const calculateLandAllocatedToStreets = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericUrbanSurfaceStreets = parseFloat(urbanSurfaceStreets);
     const numericTotalUrbanArea = parseFloat(totalUrbanArea);
 
-    if (numericUrbanSurfaceStreets > 0 && numericTotalUrbanArea > 0) {
-      // Calculate Land Allocated to Streets (%)
-      const landAllocated =
-        (numericUrbanSurfaceStreets / numericTotalUrbanArea) * 100;
-      setAllocatedPercentage(landAllocated);
+    if (isNaN(numericUrbanSurfaceStreets) || isNaN(numericTotalUrbanArea)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
 
-      // Standardized Score Calculation
-      let standardizedScoreValue: number;
-      if (landAllocated <= MIN) {
-        standardizedScoreValue = 0;
-      } else if (landAllocated >= MAX) {
-        standardizedScoreValue = 100;
-      } else {
-        standardizedScoreValue =
-          100 * ((landAllocated - MIN) / (MAX - MIN));
-      }
-      setStandardizedScore(standardizedScoreValue);
-
-      // Decision
-      if (landAllocated <= MIN) {
-        setDecision("Land allocated to streets is below the minimum benchmark.");
-      } else if (landAllocated >= MAX) {
-        setDecision("Land allocated to streets meets or exceeds the benchmark.");
-      } else {
-        setDecision(
-          "Land allocated to streets is within the acceptable range."
-        );
-      }
-    } else {
+    if (numericUrbanSurfaceStreets <= 0 || numericTotalUrbanArea <= 0) {
       alert(
         "Both urban surface allocated to streets and total urban area must be positive numbers."
       );
+      return;
+    }
+
+    // Calculate Land Allocated to Streets (%)
+    const landAllocated =
+      (numericUrbanSurfaceStreets / numericTotalUrbanArea) * 100;
+    setAllocatedPercentage(landAllocated);
+
+    // Standardized Score Calculation
+    let standardizedScoreValue: number;
+    if (landAllocated <= MIN) {
+      standardizedScoreValue = 0;
+    } else if (landAllocated >= MAX) {
+      standardizedScoreValue = 100;
+    } else {
+      standardizedScoreValue =
+        100 * ((landAllocated - MIN) / (MAX - MIN));
+    }
+    setStandardizedScore(standardizedScoreValue);
+
+    // Decision
+    if (landAllocated <= MIN) {
+      setDecision("Land allocated to streets is below the minimum benchmark.");
+    } else if (landAllocated >= MAX) {
+      setDecision("Land allocated to streets meets or exceeds the benchmark.");
+    } else {
+      setDecision(
+        "Land allocated to streets is within the acceptable range."
+      );
+    }
+
+    // Prepare data to send
+    const postData = {
+      land_allocated_to_streets:landAllocated,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -57,6 +99,7 @@ function LandAllocatedToStreetsCalculator() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Land Allocated to Streets Calculator
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Surface of Urban Streets (in km²):
@@ -82,10 +125,13 @@ function LandAllocatedToStreetsCalculator() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateLandAllocatedToStreets}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {(allocatedPercentage !== null || standardizedScore !== null) && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

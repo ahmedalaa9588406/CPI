@@ -13,7 +13,7 @@ function CardSlider() {
     } else if (id === 2) {
       router.push("/home/ES/AQ/PM2.5_Concentration");
     } else if (id === 3) {
-      router.push("/home/ES/AQ/CO2_Emissions"); // New route for Unemployment Rate
+      router.push("/home/ES/AQ/CO2_Emissions");
     }
   };
 

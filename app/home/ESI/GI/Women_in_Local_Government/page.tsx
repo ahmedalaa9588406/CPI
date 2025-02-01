@@ -1,40 +1,87 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const WomenInLocalGovernment: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [womenInGovJobs, setWomenInGovJobs] = useState<number | string>(""); // Number of women in government jobs
   const [totalGovJobs, setTotalGovJobs] = useState<number | string>(""); // Total government jobs
   const [standardizedRate, setStandardizedRate] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<string | null>(null); // Decision evaluation
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Benchmark
   const BENCHMARK = 50; // X* = 50%
 
-  const calculateWomenInLocalGovernment = () => {
-    const totalJobsValue = parseFloat(totalGovJobs.toString());
-    if (totalJobsValue <= 0) {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
+    // Convert inputs to numbers
+    const womenInGovJobsNum = parseFloat(womenInGovJobs.toString());
+    const totalGovJobsNum = parseFloat(totalGovJobs.toString());
+
+    // Validate inputs
+    if (isNaN(womenInGovJobsNum) || isNaN(totalGovJobsNum)) {
+      alert("All inputs must be valid numbers.");
+      return;
+    }
+    if (totalGovJobsNum <= 0) {
       alert("Total government jobs must be greater than zero.");
       return;
     }
 
     // Women in the local government formula
-    const womenInLocalGov = (parseFloat(womenInGovJobs.toString()) / totalJobsValue) * 100;
+    const womenInLocalGov = (womenInGovJobsNum / totalGovJobsNum) * 100;
 
     // Standardized formula with absolute value
     const standardizedValue =
       100 * (1 - Math.abs((womenInLocalGov - BENCHMARK) / BENCHMARK));
 
     // Decision logic
-    if (womenInLocalGov === 0 || womenInLocalGov >= 2 * BENCHMARK) {
-      setStandardizedRate("0");
-      setEvaluation("Bad");
-    } else if (womenInLocalGov > 0 && womenInLocalGov < 2 * BENCHMARK) {
-      setStandardizedRate(standardizedValue.toFixed(2));
-      setEvaluation("Average");
+    let standardizedRateValue: number = 0; // Default value
+    let evaluationComment: string = "Bad"; // Default value
+
+    if (womenInLocalGov > 0 && womenInLocalGov < 2 * BENCHMARK) {
+      standardizedRateValue = standardizedValue;
+      evaluationComment = "Average";
     } else if (womenInLocalGov === BENCHMARK) {
-      setStandardizedRate("100");
-      setEvaluation("Good");
+      standardizedRateValue = 100;
+      evaluationComment = "Good";
+    }
+
+    setStandardizedRate(standardizedRateValue.toFixed(2));
+    setEvaluation(evaluationComment);
+
+    // Prepare data to send
+    const postData = {
+      women_in_local_government:womenInLocalGov,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -54,7 +101,6 @@ const WomenInLocalGovernment: React.FC = () => {
           placeholder="Enter number of women in government jobs"
         />
       </div>
-
       <div className="mb-4">
         <label className="block mb-2 font-semibold">Total Government Jobs:</label>
         <input
@@ -65,18 +111,19 @@ const WomenInLocalGovernment: React.FC = () => {
           placeholder="Enter total government jobs"
         />
       </div>
-
       <button
-        onClick={calculateWomenInLocalGovernment}
-        className="p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Standardized Rate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Standardized Rate'}
       </button>
-
       {standardizedRate !== null && (
         <div className="mt-4">
           <h3 className="text-lg">
-            Standardized Women in Local Government: {standardizedRate}
+            Standardized Women in Local Government: {standardizedRate}%
           </h3>
           <h3 className="text-lg">
             Evaluation: {evaluation}

@@ -1,15 +1,22 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function MaternalMortalityCalculator() {
+  const { user, isLoaded } = useUser();
   const [maternalDeaths, setMaternalDeaths] = useState<string>("");
   const [liveBirths, setLiveBirths] = useState<string>("");
   const [maternalMortality, setMaternalMortality] = useState<string | null>(null);
   const [standardizedMortality, setStandardizedMortality] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Function to calculate Maternal Mortality
-  const calculateMaternalMortality = () => {
+  const calculateMaternalMortality = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const deaths = parseFloat(maternalDeaths);
     const births = parseFloat(liveBirths);
 
@@ -33,6 +40,35 @@ function MaternalMortalityCalculator() {
       }
 
       setStandardizedMortality(standardized.toFixed(2));
+
+      // Prepare data to send
+      const postData = {
+        maternal_mortality: mortality,
+        userId: user.id,
+      };
+
+      try {
+        setIsSubmitting(true);
+        const response = await fetch('/api/calculation-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(postData),
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const result = await response.json();
+        console.log('Result:', result);
+        alert("Data calculated and saved successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('Error saving data:', errorMessage);
+        alert("Failed to save data. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       alert("Please provide valid inputs for both fields.");
     }
@@ -68,9 +104,12 @@ function MaternalMortalityCalculator() {
 
       <button
         onClick={calculateMaternalMortality}
-        className="p-2 bg-blue-500 text-white rounded w-full"
+        disabled={isSubmitting}
+        className={`p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Maternal Mortality
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Maternal Mortality'}
       </button>
 
       {maternalMortality && (

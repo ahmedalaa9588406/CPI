@@ -1,7 +1,9 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const HerfindahlHirschmanIndex: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [industryShares, setIndustryShares] = useState<string>(""); // Comma-separated values
   const [numberOfIndustries, setNumberOfIndustries] = useState<number | undefined>();
   const [hIndex, setHIndex] = useState<number>(0); // H Index
@@ -9,8 +11,14 @@ const HerfindahlHirschmanIndex: React.FC = () => {
   const [standardizedHIndex, setStandardizedHIndex] = useState<number>(0); // Standardized H(S)
   const [benchmark, setBenchmark] = useState<number>(0); // X*
   const [decision, setDecision] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const calculateHIndex = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     if (!numberOfIndustries || numberOfIndustries <= 0) {
       alert("Please enter a valid number of industries.");
       return;
@@ -21,7 +29,6 @@ const HerfindahlHirschmanIndex: React.FC = () => {
       .split(",")
       .map((share) => parseFloat(share.trim()))
       .filter((share) => !isNaN(share));
-
     if (shares.length !== numberOfIndustries) {
       alert("Number of industries must match the number of shares entered.");
       return;
@@ -37,13 +44,15 @@ const HerfindahlHirschmanIndex: React.FC = () => {
 
     // Calculate Benchmark X*
     const xStar =
-      Math.abs((0.25 - 1 / numberOfIndustries) / (1 - 1 / numberOfIndustries));
+      (0.25 - 1 / numberOfIndustries) / (1 - 1 / numberOfIndustries);
     setBenchmark(xStar);
 
     // Calculate Standardized H(S) with absolute value in both numerator and denominator
     let standardizedH =
       100 *
-      (1 - Math.abs(normalizedH - xStar) / Math.abs(xStar));
+      (1 -
+        Math.abs(normalizedH - xStar) /
+          Math.abs(xStar));
     if (standardizedH < 0) standardizedH = 0; // Ensure the value is not negative
     if (standardizedH > 100) standardizedH = 100; // Cap the value at 100
     setStandardizedHIndex(standardizedH);
@@ -54,6 +63,35 @@ const HerfindahlHirschmanIndex: React.FC = () => {
     } else {
       setDecision("Low Concentration");
     }
+
+    // Prepare data to send
+    const postData = {
+      economic_specialization: h,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -61,7 +99,7 @@ const HerfindahlHirschmanIndex: React.FC = () => {
       <h1 className="text-3xl font-bold mb-6 text-center">
         Herfindahl-Hirschman Index Calculator
       </h1>
-
+      
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Number of Industries (N):
@@ -74,7 +112,6 @@ const HerfindahlHirschmanIndex: React.FC = () => {
           placeholder="Enter the number of industries"
         />
       </div>
-
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Industry Shares (comma-separated, e.g., 0.2, 0.3, 0.5):
@@ -87,14 +124,15 @@ const HerfindahlHirschmanIndex: React.FC = () => {
           placeholder="Enter shares as decimals"
         />
       </div>
-
       <button
-        onClick={calculateHIndex}
-        className="p-4 bg-blue-600 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-4 bg-blue-600 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate H Index
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate H Index'}
       </button>
-
       {decision && (
         <div className="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner">
           <h2 className="text-xl font-semibold mb-4">

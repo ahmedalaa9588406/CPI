@@ -15,7 +15,7 @@ export default function WelcomePage() {
         
         <div className="flex justify-center ">
           <Image 
-          src="/assets/pngtree-modern-black-city-icon-vector-png-png-image_5709711.png" 
+          src="/assets/pixelcut-export.png" 
           className="w-48 h-48 sm:w-64 sm:h-64 md:w-128 md:h-128" 
           alt="city icon" 
           width={200} 

@@ -1,50 +1,93 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function AffordabilityOfTransportForm() {
-  const [averageCostPerTrip, setAverageCostPerTrip] = useState("");
-  const [averageIncome, setAverageIncome] = useState("");
+  const { user, isLoaded } = useUser();
+  const [averageCostPerTrip, setAverageCostPerTrip] = useState<string>("");
+  const [averageIncome, setAverageIncome] = useState<string>("");
   const [affordability, setAffordability] = useState<number | null>(null);
   const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants
   const minBenchmark = 4; // Minimum affordability benchmark in %
   const maxBenchmark = 26; // Maximum affordability benchmark in %
   const tripsPerMonth = 60; // Number of trips per month
 
-  const calculateAffordability = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericCostPerTrip = parseFloat(averageCostPerTrip);
     const numericIncome = parseFloat(averageIncome);
 
-    if (numericCostPerTrip > 0 && numericIncome > 0) {
-      // Affordability of Transport
-      const affordabilityValue =
-        (tripsPerMonth * numericCostPerTrip * 100) / numericIncome;
-      setAffordability(affordabilityValue);
+    if (isNaN(numericCostPerTrip) || isNaN(numericIncome)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
 
-      // Standardized Score (S)
-      let standardizedScoreValue: number;
-      if (affordabilityValue >= maxBenchmark) {
-        standardizedScoreValue = 0; // If affordability >= max benchmark
-      } else if (affordabilityValue < minBenchmark) {
-        standardizedScoreValue = 100; // If affordability < min benchmark
-      } else {
-        standardizedScoreValue =
-          100 * (1 - (affordabilityValue - minBenchmark) / (maxBenchmark - minBenchmark));
-      }
-      setStandardizedScore(standardizedScoreValue);
-
-      // Decision based on the standardized score
-      if (affordabilityValue >= maxBenchmark) {
-        setDecision("Transport is Not Affordable");
-      } else if (affordabilityValue < minBenchmark) {
-        setDecision("Transport is Highly Affordable");
-      } else {
-        setDecision("Transport is Moderately Affordable");
-      }
-    } else {
+    if (numericCostPerTrip <= 0 || numericIncome <= 0) {
       alert("Both average cost per trip and average income must be positive numbers.");
+      return;
+    }
+
+    // Affordability of Transport
+    const affordabilityValue =
+      (tripsPerMonth * numericCostPerTrip * 100) / numericIncome;
+    setAffordability(affordabilityValue);
+
+    // Standardized Score (S)
+    let standardizedScoreValue: number;
+    if (affordabilityValue >= maxBenchmark) {
+      standardizedScoreValue = 0; // If affordability >= max benchmark
+    } else if (affordabilityValue < minBenchmark) {
+      standardizedScoreValue = 100; // If affordability < min benchmark
+    } else {
+      standardizedScoreValue =
+        100 * (1 - (affordabilityValue - minBenchmark) / (maxBenchmark - minBenchmark));
+    }
+    setStandardizedScore(standardizedScoreValue);
+
+    // Decision based on the standardized score
+    if (affordabilityValue >= maxBenchmark) {
+      setDecision("Transport is Not Affordable");
+    } else if (affordabilityValue < minBenchmark) {
+      setDecision("Transport is Highly Affordable");
+    } else {
+      setDecision("Transport is Moderately Affordable");
+    }
+
+    // Prepare data to send
+    const postData = {
+      affordability_of_transport: affordabilityValue,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -53,6 +96,7 @@ function AffordabilityOfTransportForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Affordability of Transport Calculator
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Average Cost per Trip (in local currency):
@@ -78,10 +122,13 @@ function AffordabilityOfTransportForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateAffordability}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {(affordability !== null || standardizedScore !== null) && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

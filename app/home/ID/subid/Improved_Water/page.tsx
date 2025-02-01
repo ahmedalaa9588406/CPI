@@ -1,48 +1,75 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
 function ImprovedWaterForm() {
+  const { user, isLoaded } = useUser();
   const [durableHouseholds, setDurableHouseholds] = useState("");
   const [totalHouseholds, setTotalHouseholds] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [improvedWaterS, setImprovedWaterS] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Constants
   const MIN = 50;
   const MAX = 100;
 
-  const calculateImprovedShelter = () => {
+  const calculateImprovedWater = async () => {
+    if (!user) {
+      alert("Please sign in to save calculations");
+      return;
+    }
+
     const numericTotalHouseholds = Number(totalHouseholds);
     if (numericTotalHouseholds > 0) {
       const numericDurableHouseholds = Number(durableHouseholds);
-      const improvedwater =
-        (numericDurableHouseholds / numericTotalHouseholds) * 100;
+      const improvedWater = (numericDurableHouseholds / numericTotalHouseholds) * 100;
 
-      // Calculate Standardized Improved Shelter (S)
-      let standardizedImprovedWater =
-        100 * ((improvedwater - MIN) / (MAX - MIN));
-
-      // Cap at 100 if it exceeds, or set to 0 if it's below 0
-      if (standardizedImprovedWater > 100) {
-        standardizedImprovedWater = 100;
-      } else if (standardizedImprovedWater < 0) {
-        standardizedImprovedWater = 0;
-      }
+      let standardizedImprovedWater = 100 * ((improvedWater - MIN) / (MAX - MIN));
+      standardizedImprovedWater = Math.min(Math.max(standardizedImprovedWater, 0), 100);
 
       setImprovedWaterS(standardizedImprovedWater);
-      setResult(improvedwater.toFixed(2));
+      setResult(improvedWater.toFixed(2));
 
-      // Determine decision message
-      if (standardizedImprovedWater > 50) {
-        setDecision("Perfect");
-      } else {
-        setDecision("Bad");
+      try {
+        setIsSubmitting(true);
+        const response = await fetch('/api/calculation-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            improved_water: improvedWater,
+            userId: user.id
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to store data');
+        }
+
+        // Set decision after successful save
+        if (standardizedImprovedWater > 50) {
+          setDecision("Perfect");
+        } else {
+          setDecision("Bad");
+        }
+
+      } catch (error) {
+        console.error('Error storing data:', error);
+        alert('Failed to store the calculation result');
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
       alert("Total households must be greater than zero.");
     }
   };
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
@@ -74,10 +101,11 @@ function ImprovedWaterForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateImprovedShelter}
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-gray-400"
+        onClick={calculateImprovedWater}
+        disabled={isSubmitting}
       >
-        Calculate
+        {isSubmitting ? 'Saving...' : 'Calculate'}
       </button>
       {result !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

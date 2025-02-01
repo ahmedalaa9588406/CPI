@@ -1,22 +1,31 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const LandUseEfficiencyIndicator: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [urbInit, setUrbInit] = useState<number | string>(""); // Built-up area in the initial year
   const [urbFinal, setUrbFinal] = useState<number | string>(""); // Built-up area in the final year
   const [popInit, setPopInit] = useState<number | string>(""); // Population in the initial year
   const [popFinal, setPopFinal] = useState<number | string>(""); // Population in the final year
   const [years, setYears] = useState<number | string>(""); // Number of years between initial and final year
+  const [landUseEfficiency, setLandUseEfficiency] = useState<number | null>(null);
+  const [standardizedEfficiency, setStandardizedEfficiency] = useState<number | null>(null);
+  const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const calculateLandUseEfficiency = () => {
-    const urb_t = Number(urbInit); // Initial built-up area
-    const urb_tn = Number(urbFinal); // Final built-up area
-    const pop_t = Number(popInit); // Initial population
-    const pop_tn = Number(popFinal); // Final population
-    const y = Number(years); // Number of years
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
 
-    // Validate inputs
+    const urb_t = parseFloat(urbInit.toString());
+    const urb_tn = parseFloat(urbFinal.toString());
+    const pop_t = parseFloat(popInit.toString());
+    const pop_tn = parseFloat(popFinal.toString());
+    const y = parseFloat(years.toString());
+
     if (
       isNaN(urb_t) ||
       isNaN(urb_tn) ||
@@ -29,98 +38,156 @@ const LandUseEfficiencyIndicator: React.FC = () => {
       pop_tn <= 0 ||
       y <= 0
     ) {
-      return "Invalid data";
+      alert("Please provide valid inputs for all fields.");
+      return;
     }
 
-    // Numerator: Urban expansion growth
+    // Calculate Urban Expansion Growth Rate
     const urbanGrowthRate = Math.pow((urb_tn - urb_t) / urb_t, 1 / y);
-
-    // Denominator: Population annual growth rate
+    // Calculate Population Annual Growth Rate
     const populationGrowthRate = Math.pow((pop_tn - pop_t) / pop_t, 1 / y);
+    // Calculate Land Use Efficiency
+    const efficiency = urbanGrowthRate / populationGrowthRate;
+    setLandUseEfficiency(efficiency);
 
-    // Land Use Efficiency calculation
-    const landUseEfficiency = urbanGrowthRate / populationGrowthRate;
+    // Standardization
+    const min = 0;
+    const max = 3;
+    let standardized;
+    if (efficiency >= max) {
+      standardized = 0;
+    } else if (efficiency > min && efficiency < max) {
+      standardized = 100 * ((max - efficiency) / (max - min));
+    } else {
+      standardized = 100;
+    }
+    setStandardizedEfficiency(standardized);
 
-    return landUseEfficiency.toFixed(4); // Limit to 4 decimal places
+    // Decision Logic
+    if (efficiency >= 3) {
+      setDecision("Inefficient");
+    } else if (efficiency > 0 && efficiency < 3) {
+      setDecision("Moderate");
+    } else {
+      setDecision("Efficient");
+    }
+
+    // Prepare data to send
+    const postData = {
+      land_use_efficiency: efficiency,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Land Use Efficiency Indicator</h2>
-      <p className="mb-4">
-        This indicator measures the efficiency of urban land use by comparing the growth
-        rate of built-up areas to the growth rate of population over a specified period.
-      </p>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">
-          Built-up Area (Initial Year - Urbₜ):
+      <h1 className="text-2xl font-bold mb-6 text-center">Land Use Efficiency Indicator</h1>
+      
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Built-up Area (Initial Year):
         </label>
         <input
           type="number"
           value={urbInit}
           onChange={(e) => setUrbInit(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full"
+          className="border rounded p-2 w-full"
           placeholder="Enter initial built-up area (km²)"
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">
-          Built-up Area (Final Year - Urbₜ₊ₙ):
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Built-up Area (Final Year):
         </label>
         <input
           type="number"
           value={urbFinal}
           onChange={(e) => setUrbFinal(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full"
+          className="border rounded p-2 w-full"
           placeholder="Enter final built-up area (km²)"
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">
-          Population (Initial Year - Popₜ):
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Population (Initial Year):
         </label>
         <input
           type="number"
           value={popInit}
           onChange={(e) => setPopInit(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full"
+          className="border rounded p-2 w-full"
           placeholder="Enter initial population"
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">
-          Population (Final Year - Popₜ₊ₙ):
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Population (Final Year):
         </label>
         <input
           type="number"
           value={popFinal}
           onChange={(e) => setPopFinal(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full"
+          className="border rounded p-2 w-full"
           placeholder="Enter final population"
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">Number of Years (y):</label>
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Number of Years:
+        </label>
         <input
           type="number"
           value={years}
           onChange={(e) => setYears(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full"
-          placeholder="Enter number of years between initial and final year"
+          className="border rounded p-2 w-full"
+          placeholder="Enter number of years"
         />
       </div>
-
-      <div className="mt-4">
-        <p className="font-semibold">
-          Land Use Efficiency:{" "}
-          <span className="font-bold">{calculateLandUseEfficiency()}</span>
-        </p>
-      </div>
+      <button
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-4 bg-blue-600 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+      >
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Land Use Efficiency'}
+      </button>
+      {landUseEfficiency !== null && (
+        <div className="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner">
+          <h2 className="text-xl font-semibold mb-4">
+            Land Use Efficiency: {landUseEfficiency.toFixed(4)}
+          </h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Standardized Efficiency: {standardizedEfficiency?.toFixed(2)}
+          </h2>
+          <h2 className="text-xl font-semibold">
+            Decision: {decision}
+          </h2>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,48 +1,74 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
-function ImprovedWaterForm() {
-  const [durableHouseholds, setImprovedSanitationHouseholds] = useState("");
+function ImprovedSanitationForm() {
+  const { user, isLoaded } = useUser();
+  const [improvedSanitationHouseholds, setImprovedSanitationHouseholds] = useState("");
   const [totalHouseholds, setTotalHouseholds] = useState("");
   const [result, setResult] = useState<string | null>(null);
-  const [improvedWaterS, setImprovedWaterS] = useState<number | null>(null);
+  const [improvedSanitationS, setImprovedSanitationS] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Constants
   const MIN = 15;
   const MAX = 100;
 
-  const calculateImprovedShelter = () => {
+  const calculateImprovedSanitation = async () => {
+    if (!user) {
+      alert("Please sign in to save calculations");
+      return;
+    }
+
     const numericTotalHouseholds = Number(totalHouseholds);
     if (numericTotalHouseholds > 0) {
-      const numericDurableHouseholds = Number(durableHouseholds);
-      const ImprovedSanitation =
-        (numericDurableHouseholds / numericTotalHouseholds) * 100;
+      const numericImprovedHouseholds = Number(improvedSanitationHouseholds);
+      const improvedSanitation = (numericImprovedHouseholds / numericTotalHouseholds) * 100;
 
-      // Calculate Standardized Improved Shelter (S)
-      let standardizedImprovedSanitation =
-        100 * ((ImprovedSanitation - MIN) / (MAX - MIN));
+      let standardizedImprovedSanitation = 100 * ((improvedSanitation - MIN) / (MAX - MIN));
+      standardizedImprovedSanitation = Math.min(Math.max(standardizedImprovedSanitation, 0), 100);
 
-      // Cap at 100 if it exceeds, or set to 0 if it's below 0
-      if (standardizedImprovedSanitation > 100) {
-        standardizedImprovedSanitation = 100;
-      } else if (standardizedImprovedSanitation < 0) {
-        standardizedImprovedSanitation = 0;
-      }
+      setImprovedSanitationS(standardizedImprovedSanitation);
+      setResult(improvedSanitation.toFixed(2));
 
-      setImprovedWaterS(standardizedImprovedSanitation);
-      setResult(ImprovedSanitation.toFixed(2));
+      try {
+        setIsSubmitting(true);
+        const response = await fetch('/api/calculation-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            improved_sanitation: improvedSanitation,
+            userId: user.id
+          }),
+        });
 
-      // Determine decision message
-      if (standardizedImprovedSanitation > 15) {
-        setDecision("Perfect");
-      } else {
-        setDecision("Bad");
+        if (!response.ok) {
+          throw new Error('Failed to store data');
+        }
+
+        if (standardizedImprovedSanitation > 15) {
+          setDecision("Perfect");
+        } else {
+          setDecision("Bad");
+        }
+
+      } catch (error) {
+        console.error('Error storing data:', error);
+        alert('Failed to store the calculation result');
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
       alert("Total households must be greater than zero.");
     }
   };
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
@@ -55,7 +81,7 @@ function ImprovedWaterForm() {
           <input
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             type="number"
-            value={durableHouseholds}
+            value={improvedSanitationHouseholds}
             onChange={(e) => setImprovedSanitationHouseholds(e.target.value)}
             required
           />
@@ -74,25 +100,24 @@ function ImprovedWaterForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateImprovedShelter}
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-gray-400"
+        onClick={calculateImprovedSanitation}
+        disabled={isSubmitting}
       >
-        Calculate
+        {isSubmitting ? 'Saving...' : 'Calculate'}
       </button>
       {result !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">
           <p className="text-lg">Improved Sanitation: {result}%</p>
           <p className="text-sm text-gray-600">Improved Sanitation (S):</p>
           <ul className="list-disc pl-5">
-            <li>Improved Sanitation Standardized: {improvedWaterS?.toFixed(2)}%</li>
+            <li>Improved Sanitation Standardized: {improvedSanitationS?.toFixed(2)}%</li>
           </ul>
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
                 decision === "Perfect"
                   ? "bg-green-500"
-                  : decision === "Bad"
-                  ?  "bg-red-500"
                   : "bg-red-500"
               }`}
             >
@@ -105,4 +130,4 @@ function ImprovedWaterForm() {
   );
 }
 
-export default ImprovedWaterForm;
+export default ImprovedSanitationForm;

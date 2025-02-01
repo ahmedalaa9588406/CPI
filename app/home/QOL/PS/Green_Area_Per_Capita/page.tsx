@@ -1,17 +1,24 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const GreenAreaPerCapitaStandardization: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [totalGreenArea, setTotalGreenArea] = useState<string>(""); // Input: total green area in the city
   const [population, setPopulation] = useState<string>(""); // Input: city population
   const [standardizedRate, setStandardizedRate] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<string | null>(null); // Decision evaluation
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants for benchmarks
   const BENCHMARK = 15; // X* = 15 m²/hab based on WHO suggestion
 
-  const calculateGreenAreaPerCapita = () => {
+  const calculateGreenAreaPerCapita = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const totalGreenAreaValue = parseFloat(totalGreenArea);
     const populationValue = parseFloat(population);
 
@@ -24,16 +31,50 @@ const GreenAreaPerCapitaStandardization: React.FC = () => {
     const greenAreaPerCapita = totalGreenAreaValue / populationValue;
 
     // Decision logic
+    let standardized;
+    let evaluationText;
+
     if (greenAreaPerCapita < 0) {
-      setStandardizedRate("0");
-      setEvaluation("Bad");
+      standardized = 0;
+      evaluationText = "Bad";
     } else if (greenAreaPerCapita < BENCHMARK) {
-      const standardized = 100 * (1 - Math.abs((BENCHMARK - greenAreaPerCapita) / BENCHMARK));
-      setStandardizedRate(standardized.toFixed(2));
-      setEvaluation("Average");
+      standardized = 100 * (1 - Math.abs((BENCHMARK - greenAreaPerCapita) / BENCHMARK));
+      evaluationText = "Average";
     } else {
-      setStandardizedRate("100");
-      setEvaluation("Good");
+      standardized = 100;
+      evaluationText = "Good";
+    }
+
+    setStandardizedRate(standardized.toFixed(2));
+    setEvaluation(evaluationText);
+
+    // Prepare data to send
+    const postData = {
+      green_area_per_capita: greenAreaPerCapita,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -65,9 +106,12 @@ const GreenAreaPerCapitaStandardization: React.FC = () => {
 
       <button
         onClick={calculateGreenAreaPerCapita}
-        className="p-2 bg-blue-500 text-white rounded w-full"
+        disabled={isSubmitting}
+        className={`p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Standardized Rate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Standardized Rate'}
       </button>
 
       {standardizedRate !== null && (

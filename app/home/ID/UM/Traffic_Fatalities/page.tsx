@@ -1,49 +1,92 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function TrafficFatalitiesForm() {
-  const [totalFatalities, setTotalFatalities] = useState("");
-  const [cityPopulation, setCityPopulation] = useState("");
+  const { user, isLoaded } = useUser();
+  const [totalFatalities, setTotalFatalities] = useState<string>("");
+  const [cityPopulation, setCityPopulation] = useState<string>("");
   const [fatalitiesPer100k, setFatalitiesPer100k] = useState<number | null>(null);
   const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants
   const minBenchmark = 1; // Min fatalities per 100,000 people
   const maxBenchmark = 31; // Max fatalities per 100,000 people
 
-  const calculateTrafficFatalities = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericTotalFatalities = parseFloat(totalFatalities);
     const numericCityPopulation = parseFloat(cityPopulation);
 
-    if (numericTotalFatalities > 0 && numericCityPopulation > 0) {
-      // Traffic Fatalities per 100,000 People
-      const fatalitiesPer100kValue =
-        (numericTotalFatalities / numericCityPopulation) * 100000;
-      setFatalitiesPer100k(fatalitiesPer100kValue);
+    if (isNaN(numericTotalFatalities) || isNaN(numericCityPopulation)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
 
-      // Standardized Score (S)
-      let standardizedScoreValue: number;
-      if (fatalitiesPer100kValue >= maxBenchmark) {
-        standardizedScoreValue = 0; // If fatalities >= max benchmark
-      } else if (fatalitiesPer100kValue < minBenchmark) {
-        standardizedScoreValue = 1; // If fatalities < min benchmark
-      } else {
-        standardizedScoreValue =
-          1 - (fatalitiesPer100kValue - minBenchmark) / (maxBenchmark - minBenchmark);
-      }
-      setStandardizedScore(standardizedScoreValue * 100);
-
-      // Decision based on the standardized score
-      if (fatalitiesPer100kValue >= maxBenchmark) {
-        setDecision("High Traffic Fatalities");
-      } else if (fatalitiesPer100kValue < minBenchmark) {
-        setDecision("Very Low Traffic Fatalities");
-      } else {
-        setDecision("Moderate Traffic Fatalities");
-      }
-    } else {
+    if (numericTotalFatalities <= 0 || numericCityPopulation <= 0) {
       alert("Both total fatalities and city population must be positive numbers.");
+      return;
+    }
+
+    // Traffic Fatalities per 100,000 People
+    const fatalitiesPer100kValue =
+      (numericTotalFatalities / numericCityPopulation) * 100000;
+    setFatalitiesPer100k(fatalitiesPer100kValue);
+
+    // Standardized Score (S)
+    let standardizedScoreValue: number;
+    if (fatalitiesPer100kValue >= maxBenchmark) {
+      standardizedScoreValue = 0; // If fatalities >= max benchmark
+    } else if (fatalitiesPer100kValue < minBenchmark) {
+      standardizedScoreValue = 100; // If fatalities < min benchmark
+    } else {
+      standardizedScoreValue =
+        100 * (1 - (fatalitiesPer100kValue - minBenchmark) / (maxBenchmark - minBenchmark));
+    }
+    setStandardizedScore(standardizedScoreValue);
+
+    // Decision based on the standardized score
+    if (fatalitiesPer100kValue >= maxBenchmark) {
+      setDecision("High Traffic Fatalities");
+    } else if (fatalitiesPer100kValue < minBenchmark) {
+      setDecision("Very Low Traffic Fatalities");
+    } else {
+      setDecision("Moderate Traffic Fatalities");
+    }
+
+    // Prepare data to send
+    const postData = {
+      traffic_fatalities: fatalitiesPer100kValue,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -52,6 +95,7 @@ function TrafficFatalitiesForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Traffic Fatalities Calculator
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Traffic Fatalities per Year:
@@ -77,10 +121,13 @@ function TrafficFatalitiesForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateTrafficFatalities}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {(fatalitiesPer100k !== null || standardizedScore !== null) && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

@@ -1,46 +1,85 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function PhysicianDensityForm() {
-  const [physicians, setPhysicians] = useState("");
-  const [totalPopulation, setTotalPopulation] = useState("");
+  const { user, isLoaded } = useUser();
+  const [physicians, setPhysicians] = useState<string>("");
+  const [totalPopulation, setTotalPopulation] = useState<string>("");
   const [physicianDensity, setPhysicianDensity] = useState<string | null>(null);
   const [standardizedDensity, setStandardizedDensity] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants for benchmarking
   const MIN = 0.01;
   const MAX = 7.74;
 
-  const calculatePhysicianDensity = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericPopulation = Number(totalPopulation);
-    if (numericPopulation > 0) {
-      const numericPhysicians = Number(physicians);
-      const density = (numericPhysicians / numericPopulation) * 1000;
-
-      // Calculate Standardized Physician Density (S)
-      let standardized = 1000 * ((Math.pow(density,0.5) - 0.1) / (2.78 - 0.1));
-
-      // Cap at 100 if it exceeds, or set to 0 if it's below 0
-      if (standardized > 100) {
-        standardized = 100;
-      } else if (standardized < 0) {
-        standardized = 0;
-      }
-
-      setPhysicianDensity(density.toFixed(2));
-      setStandardizedDensity(standardized);
-
-      // Determine decision message
-      if (Math.pow(density,0.5) >= MAX) {
-        setDecision("Perfect");
-      } else if (Math.pow(density,0.5) > MIN && Math.pow(density,0.5) < MAX) {
-        setDecision("Good");
-      } else {
-        setDecision("Poor");
-      }
-    } else {
+    if (numericPopulation <= 0) {
       alert("Total population must be greater than zero.");
+      return;
+    }
+
+    const numericPhysicians = Number(physicians);
+    if (isNaN(numericPhysicians) || isNaN(numericPopulation)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
+
+    const density = (numericPhysicians / numericPopulation) * 1000;
+    setPhysicianDensity(density.toFixed(2));
+
+    let standardized = 1000 * ((Math.sqrt(density) - Math.sqrt(MIN)) / (Math.sqrt(MAX) - Math.sqrt(MIN)));
+    if (standardized > 100) {
+      standardized = 100;
+    } else if (standardized < 0) {
+      standardized = 0;
+    }
+    setStandardizedDensity(standardized);
+
+    // Determine decision message
+    if (Math.sqrt(density) >= Math.sqrt(MAX)) {
+      setDecision("Perfect");
+    } else if (Math.sqrt(density) > Math.sqrt(MIN) && Math.sqrt(density) < Math.sqrt(MAX)) {
+      setDecision("Good");
+    } else {
+      setDecision("Poor");
+    }
+
+    // Prepare data to send
+    const postData = {
+      physician_density:density,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -49,6 +88,7 @@ function PhysicianDensityForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Calculate Physician Density
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Number of Physicians:
@@ -74,10 +114,13 @@ function PhysicianDensityForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculatePhysicianDensity}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {physicianDensity !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

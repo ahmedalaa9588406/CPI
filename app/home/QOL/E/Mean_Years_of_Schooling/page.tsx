@@ -1,133 +1,127 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function MeanYearsOfSchoolingCalculator() {
-  const [proportion, setProportion] = useState<string>(""); // HS (proportion of population)
-  const [duration, setDuration] = useState<string>(""); // YS (official duration of education)
-  const [meanYears, setMeanYears] = useState<string>(""); // Input for already known mean years
-  const [meanResult, setMeanResult] = useState<string | null>(null);
-  const [standardizedResult, setStandardizedResult] = useState<string | null>(
-    null
-  );
+  const { user, isLoaded } = useUser();
+  const [proportions, setProportions] = useState<number[]>([]); // HS (proportion of population)
+  const [durations, setDurations] = useState<number[]>([]); // YS (official duration of education)
+  const [meanResult, setMeanResult] = useState<number | null>(null);
+  const [standardizedResult, setStandardizedResult] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  // Function to calculate Mean Years of Schooling
-  const calculateMeanYears = () => {
-    const hs = parseFloat(proportion);
-    const ys = parseFloat(duration);
-    const knownMean = parseFloat(meanYears);
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
 
-    if (!isNaN(hs) && !isNaN(ys) && hs > 0 && ys > 0) {
-      const meanYearsOfSchooling = hs * ys; // Weighted calculation
-      setMeanResult(meanYearsOfSchooling.toFixed(2));
+    // Validate inputs
+    if (proportions.length !== durations.length || proportions.length === 0) {
+      alert("Please provide valid proportions and durations for each education level.");
+      return;
+    }
 
-      // Standardization logic
-      const minYears = 0;
-      const maxYears = 14;
+    // Calculate mean years of schooling
+    let meanYearsOfSchooling = 0;
+    for (let i = 0; i < proportions.length; i++) {
+      meanYearsOfSchooling += proportions[i] * durations[i];
+    }
+    setMeanResult(meanYearsOfSchooling);
 
-      let standardized;
-      if (meanYearsOfSchooling >= maxYears) {
-        standardized = 100;
-      } else if (meanYearsOfSchooling <= minYears) {
-        standardized = 0;
-      } else {
-        // Including absolute value around the numerator
-        standardized =
-          100 *
-          (1 - Math.abs(maxYears - meanYearsOfSchooling) / (maxYears - minYears));
-      }
-
-      setStandardizedResult(standardized.toFixed(2));
-    } else if (!isNaN(knownMean)) {
-      // If directly using known Mean Years of Schooling
-      const minYears = 0;
-      const maxYears = 14;
-
-      let standardized;
-      if (knownMean >= maxYears) {
-        standardized = 100;
-      } else if (knownMean <= minYears) {
-        standardized = 0;
-      } else {
-        // Including absolute value around the numerator
-        standardized =
-          100 *
-          (1 - Math.abs(maxYears - knownMean) / (maxYears - minYears));
-      }
-
-      setMeanResult(knownMean.toFixed(2));
-      setStandardizedResult(standardized.toFixed(2));
+    // Standardization logic
+    const maxYears = 14;
+    let standardized;
+    if (meanYearsOfSchooling >= maxYears) {
+      standardized = 100;
+    } else if (meanYearsOfSchooling <= 0) {
+      standardized = 0;
     } else {
-      alert("Please provide valid inputs for either calculation path.");
+      standardized = 100 * (Math.abs(1 - (maxYears - meanYearsOfSchooling) / maxYears));
+    }
+    setStandardizedResult(standardized);
+
+    // Prepare data to send
+    const postData = {
+      mean_years_of_schooling: meanYearsOfSchooling,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
-      <h1 className="text-2xl font-bold mb-4">Mean Years of Schooling Calculator</h1>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">
-          HS: Proportion of Population (%):
+      <h1 className="text-2xl font-bold mb-6 text-center">Mean Years of Schooling Calculator</h1>
+      
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Proportion of Population (%):
         </label>
         <input
-          type="number"
-          value={proportion}
-          onChange={(e) => setProportion(e.target.value)}
-          className="border rounded p-2 w-full"
-          placeholder="Enter proportion of population"
+          type="text"
+          value={proportions.join(", ")}
+          onChange={(e) => {
+            const values = e.target.value.split(',').map(Number);
+            setProportions(values);
+          }}
+          className="border rounded-lg p-4 w-full text-lg"
+          placeholder="Enter proportions separated by commas"
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">
-          YS: Official Duration of Education (Years):
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Official Duration of Education (Years):
         </label>
         <input
-          type="number"
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-          className="border rounded p-2 w-full"
-          placeholder="Enter duration of education"
+          type="text"
+          value={durations.join(", ")}
+          onChange={(e) => {
+            const values = e.target.value.split(',').map(Number);
+            setDurations(values);
+          }}
+          className="border rounded-lg p-4 w-full text-lg"
+          placeholder="Enter durations separated by commas"
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">
-          Known Mean Years of Schooling (Optional):
-        </label>
-        <input
-          type="number"
-          value={meanYears}
-          onChange={(e) => setMeanYears(e.target.value)}
-          className="border rounded p-2 w-full"
-          placeholder="Enter known mean years of schooling"
-        />
-      </div>
-
       <button
-        onClick={calculateMeanYears}
-        className="p-2 bg-blue-500 text-white rounded w-full"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-4 bg-blue-600 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Mean Years of Schooling
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Mean Years of Schooling'}
       </button>
-
-      {meanResult && (
-        <div className="mt-4">
-          <p className="text-xl font-bold">
-            Mean Years of Schooling: {meanResult}
-          </p>
-        </div>
-      )}
-
-      {standardizedResult && (
-        <div className="mt-4">
-          <p className="text-xl font-bold">
-            Standardized Mean Years of Schooling: {standardizedResult}
-          </p>
-          <p className="text-sm text-gray-600 mt-2">
-            Standardization uses the range of 0 to 14 years for normalization.
-          </p>
+      {meanResult !== null && (
+        <div className="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner">
+          <h2 className="text-xl font-semibold mb-4">
+            Mean Years of Schooling: {meanResult.toFixed(2)}
+          </h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Standardized Mean Years of Schooling: {standardizedResult?.toFixed(2)}
+          </h2>
         </div>
       )}
     </div>

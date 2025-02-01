@@ -1,57 +1,95 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function StreetDensityCalculator() {
-  const [totalUrbanStreets, setTotalUrbanStreets] = useState("");
-  const [totalUrbanSurface, setTotalUrbanSurface] = useState("");
+  const { user, isLoaded } = useUser();
+  const [totalUrbanStreets, setTotalUrbanStreets] = useState<string>("");
+  const [totalUrbanSurface, setTotalUrbanSurface] = useState<string>("");
   const [density, setDensity] = useState<number | null>(null);
   const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants
   const BENCHMARK = 20; // Benchmark density value (km/km²)
 
-  const calculateStreetDensity = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericTotalUrbanStreets = parseFloat(totalUrbanStreets);
     const numericTotalUrbanSurface = parseFloat(totalUrbanSurface);
 
-    if (numericTotalUrbanStreets > 0 && numericTotalUrbanSurface > 0) {
-      // Calculate Street Density
-      const streetDensity =
-        numericTotalUrbanStreets / numericTotalUrbanSurface;
-      setDensity(streetDensity);
+    if (isNaN(numericTotalUrbanStreets) || isNaN(numericTotalUrbanSurface)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
 
-      // Standardized Score Calculation
-      let standardizedScoreValue: number;
-      if (streetDensity === 0 || streetDensity === 2 * BENCHMARK) {
-        standardizedScoreValue = 0;
-      } else if (streetDensity === BENCHMARK) {
-        standardizedScoreValue = 100;
-      } else if (streetDensity > 0 && streetDensity < 2 * BENCHMARK) {
-        standardizedScoreValue =
-          100 *
-          (1 -
-            Math.abs((streetDensity - BENCHMARK) / BENCHMARK));
-      } else {
-        standardizedScoreValue = 0;
-      }
-      setStandardizedScore(standardizedScoreValue);
-
-      // Decision
-      if (streetDensity === 0 || streetDensity === 2 * BENCHMARK) {
-        setDecision("Invalid street density (boundary condition).");
-      } else if (streetDensity === BENCHMARK) {
-        setDecision("Street density meets the benchmark.");
-      } else if (streetDensity > 0 && streetDensity < 2 * BENCHMARK) {
-        setDecision("Street density is within acceptable range.");
-      } else {
-        setDecision("Street density exceeds acceptable range.");
-      }
-    } else {
+    if (numericTotalUrbanStreets <= 0 || numericTotalUrbanSurface <= 0) {
       alert(
         "Both total length of urban streets and total urban surface must be positive numbers."
       );
+      return;
+    }
+
+    // Calculate Street Density
+    const streetDensity =
+      numericTotalUrbanStreets / numericTotalUrbanSurface;
+    setDensity(streetDensity);
+
+    // Standardized Score Calculation
+    let standardizedScoreValue: number;
+    if (streetDensity === 0 || streetDensity >= 2 * BENCHMARK) {
+      standardizedScoreValue = 0;
+    } else if (streetDensity > 0 && streetDensity < 2 * BENCHMARK) {
+      standardizedScoreValue =
+        100 *
+        (1 -
+          Math.abs((streetDensity - BENCHMARK) / BENCHMARK));
+    } else {
+      standardizedScoreValue = 100;
+    }
+    setStandardizedScore(standardizedScoreValue);
+
+    // Decision
+    if (streetDensity === 0 || streetDensity >= 2 * BENCHMARK) {
+      setDecision("Invalid street density (boundary condition).");
+    } else if (streetDensity > 0 && streetDensity < 2 * BENCHMARK) {
+      setDecision("Street density is within acceptable range.");
+    } else {
+      setDecision("Street density meets the benchmark.");
+    }
+
+    // Prepare data to send
+    const postData = {
+      street_density: streetDensity,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -60,6 +98,7 @@ function StreetDensityCalculator() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Street Density Calculator
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Length of Urban Streets (in km):
@@ -85,10 +124,13 @@ function StreetDensityCalculator() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateStreetDensity}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {(density !== null || standardizedScore !== null) && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

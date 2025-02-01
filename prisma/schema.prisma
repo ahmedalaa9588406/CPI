@@ -13,242 +13,142 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model HouseInfrastructure {
-  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId              String
-  improved_shelter    Float
-  improved_water      Float
-  improved_sanitation Float
-  sufficient_living   Float
-  population         Int
-  electricity        Float
-  house_Infrastructure    Float
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-}
+model CalculationHistory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  
+  // House Infrastructure
+  improved_shelter    Float?
+  improved_water      Float?
+  improved_sanitation Float?
+  sufficient_living   Float?
+  population         Float?
+  electricity        Float?
+  house_Infrastructure Float?
 
-model EconomicStrength {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  city_product_per_capita Float
-  old_age_dependency_ratio Float
-  mean_household_income   Float
-  economic_strength       Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Economic Strength
+  city_product_per_capita Float?
+  old_age_dependency_ratio Float?
+  mean_household_income   Float?
+  economic_strength       Float?
 
-model EconomicAgglomeration {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  economic_density        Float
-  economic_specialization Float
-  economic_agglomeration  Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Economic Agglomeration
+  economic_density        Float?
+  economic_specialization Float?
+  economic_agglomeration  Float?
 
-model Employment {
-  id                          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                      String
-  unemployment_rate           Float
-  employment_to_population_ratio Float
-  informal_employment         Float
-  employment                  Float
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
-}
+  // Employment
+  unemployment_rate       Float?
+  employment_to_population_ratio Float?
+  informal_employment     Float?
+  employment              Float?
 
-model SocialInfrastructure {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  physician_density       Float
-  number_of_public_libraries Int
-  social_infrastructure   Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Social Infrastructure
+  physician_density       Float?
+  number_of_public_libraries Int?
+  social_infrastructure   Float?
 
-model InformationAndCommunicationTechnology {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  internet_access         Float
-  home_computer_access    Float
-  average_broadband_speed Float
-  information_and_communication_technology Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Urban Mobility
+  use_of_public_transport Float?
+  average_daily_travel_time Float?
+  length_of_mass_transport_network Float?
+  traffic_fatalities      Float?
+  affordability_of_transport Float?
+  urban_mobility          Float?
 
-model UrbanMobility {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  use_of_public_transport Float
-  average_daily_travel_time Float
-  length_of_mass_transport_network Float
-  traffic_fatalities      Float
-  affordability_of_transport Float
-  urban_mobility          Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Urban Form
+  street_intersection_density Float?
+  street_density          Float?
+  land_allocated_to_streets Float?
+  urban_form              Float?
 
-model UrbanForm {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  street_intersection_density Float
-  street_density          Float
-  land_allocated_to_streets Float
-  urban_form              Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Health
+  life_expectancy_at_birth Float?
+  under_five_mortality_rate Float?
+  vaccination_coverage     Float?
+  maternal_mortality       Float?
+  health                   Float?
 
-model Health {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  life_expectancy_at_birth Float
-  under_five_mortality_rate Float
-  vaccination_coverage     Float
-  maternal_mortality       Float
-  health                   Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Education
+  literacy_rate           Float?
+  mean_years_of_schooling Float?
+  early_childhood_education Float?
+  net_enrollment_rate_in_higher_education Float?
+  education               Float?
 
-model Education {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  literacy_rate           Float
-  mean_years_of_schooling Float
-  early_childhood_education Float
-  net_enrollment_rate_in_higher_education Float
-  education               Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Safety and Security
+  homicide_rate           Float?
+  theft_rate              Float?
+  safety_and_security     Float?
 
-model SafetyAndSecurity {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  homicide_rate           Float
-  theft_rate              Float
-  safety_and_security     Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Public Space
+  accessibility_to_open_public_areas Float?
+  green_area_per_capita   Float?
+  public_space            Float?
 
-model PublicSpace {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  accessibility_to_open_public_areas Float
-  green_area_per_capita   Float
-  public_space            Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Economic Equity
+  gini_coefficient        Float?
+  poverty_rate            Float?
+  economic_equity         Float?
 
-model EconomicEquity {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  gini_coefficient        Float
-  poverty_rate            Float
-  economic_equity         Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Social Inclusion
+  slums_households        Float?
+  youth_unemployment      Float?
+  social_inclusion        Float?
 
-model SocialInclusion {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  slums_households        Float
-  youth_unemployment      Float
-  social_inclusion        Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Gender Inclusion
+  equitable_secondary_school_enrollment Float?
+  women_in_local_government Float?
+  women_in_local_work_force Float?
+  gender_inclusion        Float?
 
-model GenderInclusion {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  equitable_secondary_school_enrollment Float
-  women_in_local_government Float
-  women_in_local_work_force Float
-  gender_inclusion        Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Urban Diversity
+  land_use_mix            Float?
+  urban_diversity         Float?
 
-model UrbanDiversity {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  land_use_mix            Float
-  urban_diversity         Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Air Quality
+  number_of_monitoring_stations Float?
+  pm25_concentration      Float?
+  co2_emissions           Float?
+  air_quality             Float?
 
-model AirQuality {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  number_of_monitoring_stations Float
-  pm25_concentration      Float
-  co2_emissions           Float
-  air_quality             Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Waste Management
+  solid_waste_collection  Float?
+  waste_water_treatment   Float?
+  solid_waste_recycling_share Float?
+  waste_management        Float?
 
-model WasteManagement {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  solid_waste_collection  Float
-  waste_water_treatment   Float
-  solid_waste_recycling_share Float
-  waste_management        Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Sustainable Energy
+  share_of_renewable_energy Float?
+  sustainable_energy      Float?
 
-model SustainableEnergy {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  share_of_renewable_energy Float
-  sustainable_energy      Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Participation
+  voter_turnout           Float?
+  access_to_public_information Float?
+  civic_participation     Float?
+  participation           Float?
 
-model Participation {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  voter_turnout           Float
-  access_to_public_information Float
-  civic_participation     Float
-  participation           Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Municipal Financing
+  own_revenue_collection  Float?
+  days_to_start_a_business Float?
+  subnational_debt        Float?
+  local_expenditure_efficiency Float?
+  municipal_financing_and_institutional_capacity Float?
 
-model MunicipalFinancingAndInstitutionalCapacity {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  own_revenue_collection  Float
-  days_to_start_a_business Float
-  subnational_debt        Float
-  local_expenditure_efficiency Float
-  municipal_financing_and_institutional_capacity Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-}
+  // Governance
+  land_use_efficiency     Float?
+  governance_of_urbanization Float?
 
-model GovernanceOfUrbanization {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                  String
-  land_use_efficiency     Float
-  governance_of_urbanization Float
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  // Information and Communications Technology
+  internet_access        Float?
+  home_computer_access   Float?
+  average_broadband_speed Float?
+  ict                    Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 

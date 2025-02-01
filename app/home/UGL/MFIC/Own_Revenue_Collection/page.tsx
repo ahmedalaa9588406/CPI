@@ -1,92 +1,138 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const OwnRevenueCollection: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [ownSourceRevenue, setOwnSourceRevenue] = useState<number | string>("");
   const [totalLocalRevenue, setTotalLocalRevenue] = useState<number | string>("");
+  const [ownRevenuePercentage, setOwnRevenuePercentage] = useState<number | null>(null);
+  const [standardizedValue, setStandardizedValue] = useState<number | null>(null);
+  const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const calculateOwnRevenueCollection = () => {
-    const ownRevenue = Number(ownSourceRevenue);
-    const totalRevenue = Number(totalLocalRevenue);
-
-    if (totalRevenue === 0 || isNaN(ownRevenue) || isNaN(totalRevenue)) {
-      return "Invalid data";
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
     }
 
-    const ownRevenuePercentage = (ownRevenue / totalRevenue) * 100;
-    return ownRevenuePercentage.toFixed(2); // Limit to 2 decimal places
-  };
+    const ownRevenue = parseFloat(ownSourceRevenue.toString());
+    const totalRevenue = parseFloat(totalLocalRevenue.toString());
 
-  const standardizeOwnRevenueCollection = () => {
-    const ownRevenueCollection = parseFloat(calculateOwnRevenueCollection());
-
-    if (isNaN(ownRevenueCollection)) {
-      return "Invalid data";
+    if (isNaN(ownRevenue) || isNaN(totalRevenue) || totalRevenue <= 0) {
+      alert("Please provide valid inputs for both fields.");
+      return;
     }
 
-    if (ownRevenueCollection >= 80) return 100;
-    if (ownRevenueCollection <= 17) return 0;
+    const percentage = (ownRevenue / totalRevenue) * 100;
+    setOwnRevenuePercentage(percentage);
 
-    return (
-      ((ownRevenueCollection - 17) / (80 - 17)) * 100
-    ).toFixed(2); // Standardized value
-  };
+    // Standardization logic
+    const min = 17;
+    const max = 80;
+    let standardized;
+    if (percentage >= max) {
+      standardized = 100;
+    } else if (percentage <= min) {
+      standardized = 0;
+    } else {
+      standardized =
+        100 * ((percentage - min) / (max - min));
+    }
+    setStandardizedValue(standardized);
 
-  const decisionLogic = () => {
-    const standardizedValue = parseFloat(standardizeOwnRevenueCollection().toString());
+    // Decision Logic
+    let decisionText;
+    if (percentage >= max) {
+      decisionText = "Excellent";
+    } else if (percentage > min && percentage < max) {
+      decisionText = "Moderate";
+    } else {
+      decisionText = "Low";
+    }
+    setDecision(decisionText);
 
-    if (isNaN(standardizedValue)) return "Invalid data";
-    if (standardizedValue === 100) return "Excellent";
-    if (standardizedValue > 0 && standardizedValue < 100) return "Moderate";
-    return "Low";
+    // Prepare data to send
+    const postData = {
+      own_revenue_collection: percentage,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Own Revenue Collection Indicator</h2>
-
-      <p className="mb-4">
-        This indicator calculates the proportion of own source revenue relative to total
-        local revenue based on local fiscal accounts.
-      </p>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">Own Source Revenue:</label>
+      <h1 className="text-2xl font-bold mb-6 text-center">Own Revenue Collection Calculator</h1>
+      
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Own Source Revenue:
+        </label>
         <input
           type="number"
           value={ownSourceRevenue}
           onChange={(e) => setOwnSourceRevenue(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full"
+          className="border rounded p-2 w-full"
           placeholder="Enter own source revenue"
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">Total Local Revenue:</label>
+      <div className="mb-6">
+        <label className="block mb-3 text-lg font-semibold">
+          Total Local Revenue:
+        </label>
         <input
           type="number"
           value={totalLocalRevenue}
           onChange={(e) => setTotalLocalRevenue(e.target.value)}
-          className="border border-gray-300 p-2 rounded w-full"
+          className="border rounded p-2 w-full"
           placeholder="Enter total local revenue"
         />
       </div>
-
-      <div className="mt-4">
-        <p className="font-semibold">
-          Own Revenue Collection:{" "}
-          <span className="font-bold">{calculateOwnRevenueCollection()}%</span>
-        </p>
-        <p className="font-semibold">
-          Standardized Value:{" "}
-          <span className="font-bold">{standardizeOwnRevenueCollection()}</span>
-        </p>
-        <p>
-          Decision Logic:{" "}
-          <span className="font-bold">{decisionLogic()}</span>
-        </p>
-      </div>
+      <button
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-4 bg-blue-600 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+      >
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Own Revenue Collection'}
+      </button>
+      {ownRevenuePercentage !== null && (
+        <div className="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner">
+          <h2 className="text-xl font-semibold mb-4">
+            Own Revenue Collection: {ownRevenuePercentage.toFixed(2)}%
+          </h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Standardized Value: {standardizedValue?.toFixed(2)}
+          </h2>
+          <h2 className="text-xl font-semibold">
+            Decision: {decision}
+          </h2>
+        </div>
+      )}
     </div>
   );
 };

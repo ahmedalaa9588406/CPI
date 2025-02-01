@@ -1,46 +1,85 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function PublicLibrariesForm() {
-  const [numLibraries, setNumLibraries] = useState("");
-  const [totalPopulation, setTotalPopulation] = useState("");
+  const { user, isLoaded } = useUser();
+  const [numLibraries, setNumLibraries] = useState<string>("");
+  const [totalPopulation, setTotalPopulation] = useState<string>("");
   const [librariesDensity, setLibrariesDensity] = useState<string | null>(null);
   const [standardizedLibraries, setStandardizedLibraries] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants for standardization
   const MIN = 1; // Minimum benchmark for libraries density
   const MAX = 7; // Maximum benchmark for libraries density
 
-  const calculateLibrariesDensity = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericPopulation = Number(totalPopulation);
-    if (numericPopulation > 0) {
-      const numericLibraries = Number(numLibraries);
-      const density = (numericLibraries / numericPopulation) * 100000;
-
-      // Standardization
-      let standardizedDensity = 100000 * ((density - MIN) / (MAX - MIN));
-
-      // Clamp values
-      if (standardizedDensity > 100) {
-        standardizedDensity = 100;
-      } else if (standardizedDensity < 0) {
-        standardizedDensity = 0;
-      }
-
-      setLibrariesDensity(density.toFixed(2));
-      setStandardizedLibraries(standardizedDensity);
-
-      // Decision-making
-      if (standardizedDensity >= 7) {
-        setDecision("Excellent");
-      } else if (standardizedDensity >1 && standardizedDensity < 7) {
-        setDecision("Good");
-      } else {
-        setDecision("Needs Improvement");
-      }
-    } else {
+    if (numericPopulation <= 0) {
       alert("Total population must be greater than zero.");
+      return;
+    }
+
+    const numericLibraries = Number(numLibraries);
+    if (isNaN(numericLibraries) || isNaN(numericPopulation)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
+
+    const density = (numericLibraries / numericPopulation) * 100000;
+    setLibrariesDensity(density.toFixed(2));
+
+    let standardizedDensity = 100000 * ((density - MIN) / (MAX - MIN));
+    if (standardizedDensity > 100) {
+      standardizedDensity = 100;
+    } else if (standardizedDensity < 0) {
+      standardizedDensity = 0;
+    }
+    setStandardizedLibraries(standardizedDensity);
+
+    // Decision-making
+    if (density >= MAX) {
+      setDecision("Excellent");
+    } else if (density > MIN && density < MAX) {
+      setDecision("Good");
+    } else {
+      setDecision("Needs Improvement");
+    }
+
+    // Prepare data to send
+    const postData = {
+      number_of_public_libraries:density,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -49,6 +88,7 @@ function PublicLibrariesForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Calculate Public Libraries Density
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Number of Public Libraries:
@@ -74,10 +114,13 @@ function PublicLibrariesForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateLibrariesDensity}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {librariesDensity !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

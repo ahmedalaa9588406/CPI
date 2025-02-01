@@ -1,53 +1,95 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function StreetIntersectionDensityForm() {
-  const [intersectionCount, setIntersectionCount] = useState("");
-  const [urbanArea, setUrbanArea] = useState("");
+  const { user, isLoaded } = useUser();
+  const [intersectionCount, setIntersectionCount] = useState<string>("");
+  const [urbanArea, setUrbanArea] = useState<string>("");
   const [density, setDensity] = useState<number | null>(null);
   const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants
   const BENCHMARK = 100; // Benchmark density value (intersections per km²)
 
-  const calculateStreetIntersectionDensity = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericIntersectionCount = parseFloat(intersectionCount);
     const numericUrbanArea = parseFloat(urbanArea);
 
-    if (numericIntersectionCount > 0 && numericUrbanArea > 0) {
-      // Calculate Street Intersection Density
-      const streetIntersectionDensity =
-        numericIntersectionCount / numericUrbanArea;
-      setDensity(streetIntersectionDensity);
+    if (isNaN(numericIntersectionCount) || isNaN(numericUrbanArea)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
 
-      // Standardized Score Calculation
-      let standardizedScoreValue: number;
-      if (streetIntersectionDensity < 0) {
-        standardizedScoreValue = 0;
-      } else if (streetIntersectionDensity >= BENCHMARK) {
-        standardizedScoreValue = 100;
-      } else {
-        standardizedScoreValue =
-          100 *
-          (1 -
-            Math.abs(
-              (streetIntersectionDensity - BENCHMARK) / BENCHMARK
-            ));
-      }
-      setStandardizedScore(standardizedScoreValue);
-
-      // Decision
-      if (streetIntersectionDensity < 0) {
-        setDecision("Invalid street intersection density.");
-      } else if (streetIntersectionDensity >= BENCHMARK) {
-        setDecision("Intersection density is excellent.");
-      } else {
-        setDecision("Intersection density is below the desired benchmark.");
-      }
-    } else {
+    if (numericIntersectionCount <= 0 || numericUrbanArea <= 0) {
       alert("Both intersection count and urban area must be positive numbers.");
+      return;
+    }
+
+    // Calculate Street Intersection Density
+    const streetIntersectionDensity =
+      numericIntersectionCount / numericUrbanArea;
+    setDensity(streetIntersectionDensity);
+
+    // Standardized Score Calculation
+    let standardizedScoreValue: number;
+    if (streetIntersectionDensity < 0) {
+      standardizedScoreValue = 0;
+    } else if (streetIntersectionDensity >= BENCHMARK) {
+      standardizedScoreValue = 100;
+    } else {
+      standardizedScoreValue =
+        100 *
+        (1 -
+          Math.abs(
+            (streetIntersectionDensity - BENCHMARK) / BENCHMARK
+          ));
+    }
+    setStandardizedScore(standardizedScoreValue);
+
+    // Decision
+    if (streetIntersectionDensity < 0) {
+      setDecision("Invalid street intersection density.");
+    } else if (streetIntersectionDensity >= BENCHMARK) {
+      setDecision("Intersection density is excellent.");
+    } else {
+      setDecision("Intersection density is below the desired benchmark.");
+    }
+
+    // Prepare data to send
+    const postData = {
+      street_intersection_density: streetIntersectionDensity,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -56,6 +98,7 @@ function StreetIntersectionDensityForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Street Intersection Density Calculator
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Number of Intersections:
@@ -81,10 +124,13 @@ function StreetIntersectionDensityForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateStreetIntersectionDensity}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {(density !== null || standardizedScore !== null) && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

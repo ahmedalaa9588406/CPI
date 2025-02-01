@@ -1,122 +1,100 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const AccessibilityToOpenPublicArea: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [population, setPopulation] = useState<string>(""); // Input: total city population
   const [lessThan400mPopulation, setLessThan400mPopulation] = useState<string>(""); // Input: population within 400m of open public area
-  const [urbanArea, setUrbanArea] = useState<string>(""); // Input: total urban area
-  const [lessThan400mUrbanArea, setLessThan400mUrbanArea] = useState<string>(""); // Input: urban area within 400m of open public area
-  const [methodology, setMethodology] = useState<"A" | "B" | null>(null); // Chosen methodology
-  const [accessibilityRate, setAccessibilityRate] = useState<string | null>(null);
+  const [accessibilityRate, setAccessibilityRate] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const calculateAccessibility = () => {
-    if (methodology === "A") {
-      const populationValue = parseFloat(population);
-      const lessThan400mPopulationValue = parseFloat(lessThan400mPopulation);
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
 
-      if (populationValue <= 0) {
-        alert("Total population must be greater than zero.");
-        return;
+    const populationValue = parseFloat(population);
+    const lessThan400mPopulationValue = parseFloat(lessThan400mPopulation);
+
+    if (isNaN(populationValue) || isNaN(lessThan400mPopulationValue) || populationValue <= 0) {
+      alert("Please provide valid inputs for both fields.");
+      return;
+    }
+
+    // Methodology A calculation
+    const rate = (100 * lessThan400mPopulationValue) / populationValue;
+    setAccessibilityRate(rate);
+
+    // Prepare data to send
+    const postData = {
+      accessibility_to_open_public_areas: rate,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      // Methodology A calculation
-      const rate = (100 * lessThan400mPopulationValue) / populationValue;
-      setAccessibilityRate(rate.toFixed(2));
-    } else if (methodology === "B") {
-      const urbanAreaValue = parseFloat(urbanArea);
-      const lessThan400mUrbanAreaValue = parseFloat(lessThan400mUrbanArea);
-
-      if (urbanAreaValue <= 0) {
-        alert("Total urban area must be greater than zero.");
-        return;
-      }
-      // Methodology B calculation
-      const rate = (100 * lessThan400mUrbanAreaValue) / urbanAreaValue;
-      setAccessibilityRate(rate.toFixed(2));
-    } else {
-      alert("Please select a methodology.");
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
-      <h1 className="text-2xl font-bold mb-4">Accessibility to Open Public Area</h1>
-
+      <h1 className="text-2xl font-bold mb-6 text-center">Accessibility to Open Public Area</h1>
+      
       <div className="mb-4">
-        <label className="block mb-2 font-semibold">Methodology:</label>
-        <select
-          value={methodology || ""}
-          onChange={(e) => setMethodology(e.target.value as "A" | "B")}
+        <label className="block mb-2 font-semibold">Total Population:</label>
+        <input
+          type="number"
+          value={population}
+          onChange={(e) => setPopulation(e.target.value)}
           className="border rounded p-2 w-full"
-        >
-          <option value="">Select Methodology</option>
-          <option value="A">Methodology A</option>
-          <option value="B">Methodology B</option>
-        </select>
+          placeholder="Enter total population"
+        />
       </div>
-
-      {methodology === "A" && (
-        <>
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">Total Population:</label>
-            <input
-              type="number"
-              value={population}
-              onChange={(e) => setPopulation(e.target.value)}
-              className="border rounded p-2 w-full"
-              placeholder="Enter total population"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">Population Within 400m of Open Public Area:</label>
-            <input
-              type="number"
-              value={lessThan400mPopulation}
-              onChange={(e) => setLessThan400mPopulation(e.target.value)}
-              className="border rounded p-2 w-full"
-              placeholder="Enter population within 400m"
-            />
-          </div>
-        </>
-      )}
-
-      {methodology === "B" && (
-        <>
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">Total Urban Area:</label>
-            <input
-              type="number"
-              value={urbanArea}
-              onChange={(e) => setUrbanArea(e.target.value)}
-              className="border rounded p-2 w-full"
-              placeholder="Enter total urban area"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">Urban Area Within 400m of Open Public Area:</label>
-            <input
-              type="number"
-              value={lessThan400mUrbanArea}
-              onChange={(e) => setLessThan400mUrbanArea(e.target.value)}
-              className="border rounded p-2 w-full"
-              placeholder="Enter urban area within 400m"
-            />
-          </div>
-        </>
-      )}
-
+      <div className="mb-4">
+        <label className="block mb-2 font-semibold">Population Within 400m of Open Public Area:</label>
+        <input
+          type="number"
+          value={lessThan400mPopulation}
+          onChange={(e) => setLessThan400mPopulation(e.target.value)}
+          className="border rounded p-2 w-full"
+          placeholder="Enter population within 400m"
+        />
+      </div>
       <button
-        onClick={calculateAccessibility}
-        className="p-2 bg-blue-500 text-white rounded w-full"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-4 bg-blue-500 text-white rounded-lg w-full text-xl hover:bg-blue-700 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Accessibility Rate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Accessibility Rate'}
       </button>
-
       {accessibilityRate !== null && (
-        <div className="mt-4">
-          <h3 className="text-lg">
-            Accessibility Rate: {accessibilityRate}%
-          </h3>
+        <div className="mt-8 p-6 bg-gray-100 rounded-lg shadow-inner">
+          <h2 className="text-xl font-semibold mb-4">
+            Accessibility Rate: {accessibilityRate.toFixed(2)}%
+          </h2>
         </div>
       )}
     </div>

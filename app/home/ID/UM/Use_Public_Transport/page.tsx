@@ -1,47 +1,88 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function PublicTransportForm() {
-  const [tripsInPTModes, setTripsInPTModes] = useState("");
-  const [totalMotorizedTrips, setTotalMotorizedTrips] = useState("");
+  const { user, isLoaded } = useUser();
+  const [tripsInPTModes, setTripsInPTModes] = useState<string>("");
+  const [totalMotorizedTrips, setTotalMotorizedTrips] = useState<string>("");
   const [usePTRatio, setUsePTRatio] = useState<number | null>(null);
   const [standardizedPTRatio, setStandardizedPTRatio] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants
   const MIN = 5.95; // Minimum value from benchmark
   const MAX = 62.16; // Maximum value from benchmark
 
-  const calculatePublicTransportUse = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const numericTotalTrips = Number(totalMotorizedTrips);
-    if (numericTotalTrips > 0) {
-      const numericTripsInPTModes = Number(tripsInPTModes);
-      const calculatedPTRatio = (numericTripsInPTModes / numericTotalTrips) * 100;
-
-      // Calculate Standardized PT Ratio (S)
-      let standardizedPTRatio =
-        100 * ((calculatedPTRatio - MIN) / (MAX - MIN));
-
-      // Cap standardized ratio at 100 if it exceeds, or set to 0 if below 0
-      if (standardizedPTRatio > 100) {
-        standardizedPTRatio = 100;
-      } else if (standardizedPTRatio < 0) {
-        standardizedPTRatio = 0;
-      }
-
-      setUsePTRatio(calculatedPTRatio);
-      setStandardizedPTRatio(standardizedPTRatio);
-
-      // Determine decision message
-      if (calculatedPTRatio >= MAX) {
-        setDecision("Perfect");
-      } else if (calculatedPTRatio > MIN && calculatedPTRatio < MAX) {
-        setDecision("Moderate");
-      } else {
-        setDecision("Poor");
-      }
-    } else {
+    if (numericTotalTrips <= 0) {
       alert("Total motorized trips must be greater than zero.");
+      return;
+    }
+
+    const numericTripsInPTModes = Number(tripsInPTModes);
+    if (isNaN(numericTripsInPTModes) || isNaN(numericTotalTrips)) {
+      alert("Please enter valid numbers for both fields.");
+      return;
+    }
+
+    const calculatedPTRatio = (numericTripsInPTModes / numericTotalTrips) * 100;
+    setUsePTRatio(calculatedPTRatio);
+
+    let standardizedPTRatio: number;
+    if (calculatedPTRatio >= MAX) {
+      standardizedPTRatio = 100;
+    } else if (calculatedPTRatio < MIN) {
+      standardizedPTRatio = 0;
+    } else {
+      standardizedPTRatio =
+        100 * ((calculatedPTRatio - MIN) / (MAX - MIN));
+    }
+    setStandardizedPTRatio(standardizedPTRatio);
+
+    // Determine decision message
+    if (calculatedPTRatio >= MAX) {
+      setDecision("Perfect");
+    } else if (calculatedPTRatio > MIN && calculatedPTRatio < MAX) {
+      setDecision("Moderate");
+    } else {
+      setDecision("Poor");
+    }
+
+    // Prepare data to send
+    const postData = {
+      use_of_public_transport: calculatedPTRatio,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -50,6 +91,7 @@ function PublicTransportForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Calculate Use of Public Transport
       </h1>
+      
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Number of Trips in Public Transport Modes:
@@ -62,7 +104,7 @@ function PublicTransportForm() {
           />
         </label>
       </div>
-      <div className="mb-6">
+      <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Motorized Trips:
           <input
@@ -75,10 +117,13 @@ function PublicTransportForm() {
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculatePublicTransportUse}
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate'}
       </button>
       {usePTRatio !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">

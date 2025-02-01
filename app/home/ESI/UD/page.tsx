@@ -23,7 +23,7 @@ function CardSlider() {
               <div className="w-16 h-16 bg-blue-500 text-white text-2xl flex items-center justify-center rounded-full mb-4 shadow-lg">
                 1
               </div>
-              <h4 className="text-lg font-bold text-gray-800 mb-2">Economic Equity</h4>
+              <h4 className="text-lg font-bold text-gray-800 mb-2">Land Use Mix</h4>
             </div>
           </div>
         </div>

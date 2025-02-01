@@ -1,100 +1,128 @@
 "use client";
 import React, { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
-function ImprovedWaterForm() {
-  const [durableHouseholds, setDurableHouseholds] = useState("");
-  const [totalHouseholds, setTotalHouseholds] = useState("");
+function PopulationDensityForm() {
+  const { user, isLoaded } = useUser();
+  const [cityPopulation, setCityPopulation] = useState("");
+  const [urbanArea, setUrbanArea] = useState("");
   const [result, setResult] = useState<string | null>(null);
-  const [improvedWaterS, setImprovedWaterS] = useState<number | null>(null);
+  const [populationDensityS, setPopulationDensityS] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Constants
   const X = 15000;
-  
 
-  const calculateImprovedShelter = () => {
-    const numericTotalHouseholds = Number(totalHouseholds);
-    if (numericTotalHouseholds > 0) {
-      const numericDurableHouseholds = Number(durableHouseholds);
-      const improvedwater =
-        (numericDurableHouseholds / numericTotalHouseholds);
+  const calculatePopulationDensity = async () => {
+    if (!user) {
+      alert("Please sign in to save calculations");
+      return;
+    }
 
-      // Calculate Standardized Improved Shelter (S)
-      let standardizedImprovedWater =
-      100 * (1-Math.abs((improvedwater - X) / X))
+    const numericUrbanArea = Number(urbanArea);
+    if (numericUrbanArea > 0) {
+      const numericPopulation = Number(cityPopulation);
+      const populationDensity = numericPopulation / numericUrbanArea;
 
-      // Cap at 100 if it exceeds, or set to 0 if it's below 0
-      if (standardizedImprovedWater > 100) {
-        standardizedImprovedWater = 100;
-      } else if (standardizedImprovedWater < 0) {
-        standardizedImprovedWater = 0;
-      }
+      let standardizedDensity = 100 * (1 - Math.abs((populationDensity - X) / X));
+      standardizedDensity = Math.min(Math.max(standardizedDensity, 0), 100);
 
-      setImprovedWaterS(standardizedImprovedWater);
-      setResult(improvedwater.toFixed(2));
+      setPopulationDensityS(standardizedDensity);
+      setResult(populationDensity.toFixed(2));
 
-      // Determine decision message
-      if (improvedwater == X) {
-        setDecision("Perfect");
-      } else if (improvedwater > 0 && improvedwater < 2*X) {
-        setDecision("good");
-      } else {
-        setDecision("Bad");
+      // Store the result in the database
+      try {
+        setIsSubmitting(true);
+        const response = await fetch('/api/calculation-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            population: populationDensity,
+            userId: user.id
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to store data');
+        }
+
+        // Set decision after successful save
+        if (standardizedDensity >= 98.4) {
+          setDecision("Perfect");
+        } else if (standardizedDensity >= 84.8) {
+          setDecision("Good");
+        } else {
+          setDecision("Bad");
+        }
+
+      } catch (error) {
+        console.error('Error storing data:', error);
+        alert('Failed to store the calculation result');
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
-      alert("Urban area must be greater than zero.");
+      alert("Total households must be greater than zero.");
     }
   };
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
-        Calculate Population Density:
+        Calculate Population Density
       </h1>
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
-          City population
+          City Population:
           <input
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             type="number"
-            value={durableHouseholds}
-            onChange={(e) => setDurableHouseholds(e.target.value)}
+            value={cityPopulation}
+            onChange={(e) => setCityPopulation(e.target.value)}
             required
           />
         </label>
       </div>
       <div className="mb-6">
         <label className="block text-gray-700 text-sm font-bold mb-2">
-          Urban area:
+          Urban Area (km²):
           <input
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             type="number"
-            value={totalHouseholds}
-            onChange={(e) => setTotalHouseholds(e.target.value)}
+            value={urbanArea}
+            onChange={(e) => setUrbanArea(e.target.value)}
             required
           />
         </label>
       </div>
       <button
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        onClick={calculateImprovedShelter}
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:bg-gray-400"
+        onClick={calculatePopulationDensity}
+        disabled={isSubmitting}
       >
-        Calculate
+        {isSubmitting ? 'Saving...' : 'Calculate'}
       </button>
       {result !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">
-          <p className="text-lg">Population Density: {result}</p>
+          <p className="text-lg">Population Density: {result} people/km²</p>
           <p className="text-sm text-gray-600">Population Density (S):</p>
           <ul className="list-disc pl-5">
-            <li>Population Density Standardized: {improvedWaterS?.toFixed(2)}%</li>
+            <li>Population Density Standardized: {populationDensityS?.toFixed(2)}%</li>
           </ul>
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
                 decision === "Perfect"
                   ? "bg-green-500"
-                  : decision === "Bad"
-                  ?  "bg-red-500"
+                  : decision === "Good"
+                  ? "bg-yellow-500"
                   : "bg-red-500"
               }`}
             >
@@ -107,4 +135,4 @@ function ImprovedWaterForm() {
   );
 }
 
-export default ImprovedWaterForm;
+export default PopulationDensityForm;

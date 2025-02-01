@@ -1,23 +1,29 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 const OldAgeDependencyCalculator: React.FC = () => {
+  const { user, isLoaded } = useUser();
   const [peopleOver65, setPeopleOver65] = useState<number | undefined>();
   const [peopleAged15to64, setPeopleAged15to64] = useState<number | undefined>();
   const [oldAgeDependencyRatio, setOldAgeDependencyRatio] = useState<number>(0);
   const [standardizedRatio, setStandardizedRatio] = useState<number>(0);
   const [decision, setDecision] = useState<string>("");
-  const [economicStrength, setEconomicStrength] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   const minLogValue = Math.log(2.92); // Minimum log value
   const maxLogValue = Math.log(40.53); // Maximum log value
 
-  const calculateDependencyRatio = () => {
+  const calculateAndSave = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     if (!peopleAged15to64 || peopleAged15to64 === 0) {
       alert("The number of people aged 15 to 64 cannot be zero.");
       return;
     }
-
     if (!peopleOver65 || peopleOver65 < 0) {
       alert("Please enter a valid number of people aged 65 and over.");
       return;
@@ -40,23 +46,43 @@ const OldAgeDependencyCalculator: React.FC = () => {
     } else {
       setDecision("Good");
     }
+
+    // Prepare data to send
+    const postData = {
+      old_age_dependency_ratio: dependencyRatio,
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  useEffect(() => {
-    // Fetch the values from localStorage and calculate the economic strength
-    const cityProductPerCapita = parseFloat(localStorage.getItem("cityProductPerCapita") || "0");
-    const meanHouseholdIncome = parseFloat(localStorage.getItem("meanHouseholdIncome") || "0");
 
-    const values = [cityProductPerCapita, oldAgeDependencyRatio, meanHouseholdIncome].filter(value => value > 0);
-    const average = values.reduce((acc, value) => acc + value, 0) / values.length;
-
-    setEconomicStrength(average);
-  }, [oldAgeDependencyRatio]);
 
   return (
     <div className="max-w-md mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-4">Old Age Dependency Ratio Calculator</h1>
-
+      
       <div className="mb-4">
         <label className="block mb-2 font-semibold">People aged 65 and over:</label>
         <input
@@ -67,7 +93,6 @@ const OldAgeDependencyCalculator: React.FC = () => {
           placeholder="Enter number of people aged 65 and over"
         />
       </div>
-
       <div className="mb-4">
         <label className="block mb-2 font-semibold">People aged 15 to 64:</label>
         <input
@@ -78,14 +103,15 @@ const OldAgeDependencyCalculator: React.FC = () => {
           placeholder="Enter number of people aged 15 to 64"
         />
       </div>
-
       <button
-        onClick={calculateDependencyRatio}
-        className="p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition"
+        onClick={calculateAndSave}
+        disabled={isSubmitting}
+        className={`p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Dependency Ratio
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Dependency Ratio'}
       </button>
-
       {decision && (
         <div className="mt-4">
           <h2 className="text-lg font-semibold">
@@ -95,7 +121,6 @@ const OldAgeDependencyCalculator: React.FC = () => {
             Standardized Ratio: {standardizedRatio.toFixed(2)}
           </h2>
           <h2 className="text-lg font-semibold">Decision: {decision}</h2>
-          <h2 className="text-lg font-semibold">Economic Strength: {economicStrength.toFixed(2)}</h2>
         </div>
       )}
     </div>

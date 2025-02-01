@@ -10,8 +10,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.9.9",
-    "@prisma/client": "^6.0.0",
+    "@clerk/nextjs": "^6.10.5",
+    "@prisma/client": "^6.2.1",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-select": "^2.1.2",
     "@radix-ui/react-slot": "^1.1.0",
@@ -21,6 +21,7 @@
     "lucide-react": "^0.462.0",
     "mongodb": "^6.11.0",
     "next": "15.0.3",
+    "next-intl": "^3.26.3",
     "react": "19.0.0-rc-66855b96-20241106",
     "react-dom": "19.0.0-rc-66855b96-20241106",
     "tailwind-merge": "^2.5.5",

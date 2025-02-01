@@ -1,14 +1,21 @@
 "use client";
-
 import React, { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 
 function HigherEducationEnrollmentCalculator() {
+  const { user, isLoaded } = useUser();
   const [enrolledPopulation, setEnrolledPopulation] = useState<string>(""); // Population enrolled in tertiary education
   const [tertiaryAgePopulation, setTertiaryAgePopulation] = useState<string>(""); // People in the tertiary education age range
   const [enrollmentRate, setEnrollmentRate] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Function to calculate the enrollment rate
-  const calculateEnrollmentRate = () => {
+  const calculateEnrollmentRate = async () => {
+    if (!isLoaded || !user) {
+      alert("User not authenticated. Please log in.");
+      return;
+    }
+
     const enrolled = parseFloat(enrolledPopulation);
     const ageRangePopulation = parseFloat(tertiaryAgePopulation);
 
@@ -23,6 +30,35 @@ function HigherEducationEnrollmentCalculator() {
       }
 
       setEnrollmentRate(rate.toFixed(2));
+
+      // Prepare data to send
+      const postData = {
+        net_enrollment_rate_in_higher_education: rate,
+        userId: user.id,
+      };
+
+      try {
+        setIsSubmitting(true);
+        const response = await fetch('/api/calculation-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(postData),
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const result = await response.json();
+        console.log('Result:', result);
+        alert("Data calculated and saved successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('Error saving data:', errorMessage);
+        alert("Failed to save data. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       alert("Please provide valid inputs for the calculation.");
     }
@@ -62,9 +98,12 @@ function HigherEducationEnrollmentCalculator() {
 
       <button
         onClick={calculateEnrollmentRate}
-        className="p-2 bg-blue-500 text-white rounded w-full"
+        disabled={isSubmitting}
+        className={`p-2 bg-blue-500 text-white rounded w-full hover:bg-blue-600 transition ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Calculate Enrollment Rate
+        {isSubmitting ? 'Calculating and Saving...' : 'Calculate Enrollment Rate'}
       </button>
 
       {enrollmentRate && (
