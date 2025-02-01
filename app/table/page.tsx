@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import Image from 'next/image';
 import { jsPDF } from 'jspdf';
-// @ts-expect-error
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
