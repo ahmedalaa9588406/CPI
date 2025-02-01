@@ -3,6 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import Image from 'next/image';
+import { jsPDF } from 'jspdf';
+// @ts-expect-error
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 type Category = {
   name: string;
@@ -244,6 +248,63 @@ export default function ContentTable() {
     return typeof value === 'number' ? value.toFixed(2) : '-';
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const tableColumn = ["Category", "Fields", "Description", "Value"];
+    const tableRows: (string | number)[][] = [];
+
+    // Add circular logo and title to first page only
+    const logoSize = 25;
+    doc.setFillColor(255, 255, 255);
+    doc.circle(25, 20, logoSize/2, 'F'); // Create white circular background
+    doc.addImage('/assets/AI_PAT.jpg', 'JPEG', 15, 10, logoSize, logoSize);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+
+    categories.forEach(category => {
+      category.fields.forEach(field => {
+        const rowData = [
+          category.name,
+          field.name,
+          field.description,
+          calculationData ? formatValue(calculationData[field.name]) : '-'
+        ];
+        tableRows.push(rowData);
+      });
+    });
+
+    autoTable(doc, { 
+      head: [tableColumn], 
+      body: tableRows, 
+      startY: 40,
+      didDrawPage: function(data) {
+        // Only add title on subsequent pages
+        if (data.pageNumber > 1) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(16);
+        }
+      }
+    });
+
+    doc.save('city_prosperity_index.pdf');
+  };
+
+  const exportToExcel = () => {
+    const worksheetData = categories.map(category => 
+      category.fields.map(field => ({
+        Category: category.name,
+        Fields: field.name,
+        Description: field.description,
+        Value: calculationData ? formatValue(calculationData[field.name]) : '-'
+      }))
+    ).flat();
+
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "City Prosperity Index");
+    XLSX.writeFile(workbook, 'city_prosperity_index.xlsx');
+  };
+
   if (!isLoaded) {
     return <div>Loading...</div>;
   }
@@ -275,6 +336,22 @@ export default function ContentTable() {
             of the City Prosperity Index, providing insights into urban development and sustainability metrics.
           </p>
         </div>
+      </div>
+
+      {/* Export Buttons */}
+      <div className="flex gap-4 mb-4">
+        <button 
+          onClick={exportToPDF}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Export to PDF
+        </button>
+        <button 
+          onClick={exportToExcel}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Export to Excel
+        </button>
       </div>
 
       {/* Existing Table Section */}
