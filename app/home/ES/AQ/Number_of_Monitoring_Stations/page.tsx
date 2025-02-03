@@ -106,7 +106,7 @@ const PM10MonitoringStations: React.FC = () => {
     const calculationResult = calculateMonitoringStations();
     if (calculationResult === null) return;
 
-    const { scoreNum, calculatedComment } = calculationResult;
+    const {calculatedComment } = calculationResult;
     const stationsNum = parseFloat(numStations.toString());
 
     try {
