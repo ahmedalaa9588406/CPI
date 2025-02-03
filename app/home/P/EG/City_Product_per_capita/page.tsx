@@ -11,6 +11,7 @@ const CityProductPerCapitaPage: React.FC = () => {
   const [pppExchangeRate, setPppExchangeRate] = useState<number>(1);
   const [cityProductPerCapita, setCityProductPerCapita] = useState<number | null>(null);
   const [standardizedValue, setStandardizedValue] = useState<number | null>(null);
+  const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   const sectors = [
@@ -23,14 +24,31 @@ const CityProductPerCapitaPage: React.FC = () => {
     'Other',
   ];
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
+    if (cityPopulation <= 0) {
+      alert("City population must be greater than zero.");
+      return;
+    }
     let totalCityProduct = 0;
     for (let i = 0; i < sectors.length; i++) {
+      if (nationalEmployment[i] <= 0) {
+        alert(`National employment for sector "${sectors[i]}" must be greater than zero.`);
+        return;
+      }
       const employmentRatio = cityEmployment[i] / nationalEmployment[i];
       const citySectorProduct = nationalProduct[i] * employmentRatio;
       totalCityProduct += citySectorProduct;
@@ -54,9 +72,14 @@ const CityProductPerCapitaPage: React.FC = () => {
     }
     setStandardizedValue(standardizedValue);
 
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedValue);
+    setDecision(evaluationComment);
+
     // Prepare data to send
     const postData = {
       city_product_per_capita: cityProductPerCapitaValue,
+      city_product_per_capita_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -69,9 +92,11 @@ const CityProductPerCapitaPage: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -87,7 +112,7 @@ const CityProductPerCapitaPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-3xl font-bold mb-6 text-center">City Product Per Capita Calculator</h1>
-      
+
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-4">Input Data</h2>
         <table className="min-w-full border-collapse border border-gray-300">
@@ -184,6 +209,22 @@ const CityProductPerCapitaPage: React.FC = () => {
           <p className="text-lg">
             <strong>Standardized Value:</strong> {standardizedValue?.toFixed(2)}
           </p>
+          {decision && (
+            <p className="text-lg">
+              <strong>Decision:</strong>{" "}
+              <span
+                className={`font-bold ${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </p>
+          )}
         </div>
       )}
     </div>

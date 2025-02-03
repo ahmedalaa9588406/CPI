@@ -14,24 +14,43 @@ function PopulationDensityForm() {
   // Constants
   const X = 15000;
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculatePopulationDensity = async () => {
     if (!user) {
       alert("Please sign in to save calculations");
       return;
     }
-
     const numericUrbanArea = Number(urbanArea);
     if (numericUrbanArea > 0) {
       const numericPopulation = Number(cityPopulation);
       const populationDensity = numericPopulation / numericUrbanArea;
-
       let standardizedDensity = 100 * (1 - Math.abs((populationDensity - X) / X));
       standardizedDensity = Math.min(Math.max(standardizedDensity, 0), 100);
 
+      // Update state with results
       setPopulationDensityS(standardizedDensity);
       setResult(populationDensity.toFixed(2));
 
-      // Store the result in the database
+      // Evaluate the decision based on the standardized score
+      const evaluationComment = getComment(standardizedDensity);
+      setDecision(evaluationComment);
+
+      // Prepare data to send
+      const postData = {
+        population: populationDensity,
+        population_comment: evaluationComment, // Renamed for consistency
+        userId: user.id,
+      };
+
       try {
         setIsSubmitting(true);
         const response = await fetch('/api/calculation-history', {
@@ -39,33 +58,25 @@ function PopulationDensityForm() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            population: populationDensity,
-            userId: user.id
-          }),
+          body: JSON.stringify(postData),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to store data');
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        // Set decision after successful save
-        if (standardizedDensity >= 98.4) {
-          setDecision("Perfect");
-        } else if (standardizedDensity >= 84.8) {
-          setDecision("Good");
-        } else {
-          setDecision("Bad");
-        }
-
-      } catch (error) {
-        console.error('Error storing data:', error);
-        alert('Failed to store the calculation result');
+        const result = await response.json();
+        console.log('Result:', result);
+        alert("Data calculated and saved successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('Error saving data:', errorMessage);
+        alert("Failed to save data. Please try again.");
       } finally {
         setIsSubmitting(false);
       }
     } else {
-      alert("Total households must be greater than zero.");
+      alert("Urban area must be greater than zero.");
     }
   };
 
@@ -119,9 +130,9 @@ function PopulationDensityForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Perfect"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Good"
+                  : decision === "SOLID"
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}

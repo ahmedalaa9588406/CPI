@@ -14,20 +14,27 @@ function LengthMassTransportNetworkForm() {
   // Constants
   const X = 80; // Benchmark value: 80 km per 1,000,000 people
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericTotalLength = parseFloat(totalLength);
     const numericTotalPopulation = parseFloat(totalPopulation);
-
     if (isNaN(numericTotalLength) || isNaN(numericTotalPopulation)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
-
     if (numericTotalLength <= 0 || numericTotalPopulation <= 0) {
       alert("Both total length and total population must be positive numbers.");
       return;
@@ -50,19 +57,14 @@ function LengthMassTransportNetworkForm() {
     }
     setStandardizedScore(standardizedScoreValue);
 
-    // Decision based on the standardized score
-    if (lengthPerMillionValue >= X) {
-      setDecision("Excellent Transport Network Coverage");
-    } else if (lengthPerMillionValue < 0) {
-      setDecision("Very Poor Transport Network Coverage");
-    } else {
-      setDecision("Moderate Transport Network Coverage");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedScoreValue);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       length_of_mass_transport_network: lengthPerMillionValue,
-
+      length_of_mass_transport_network_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -75,9 +77,11 @@ function LengthMassTransportNetworkForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -95,7 +99,7 @@ function LengthMassTransportNetworkForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Length of Mass Transport Network Calculator
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Length of Mass Transport Lanes (in km):
@@ -145,11 +149,11 @@ function LengthMassTransportNetworkForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Excellent Transport Network Coverage"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Very Poor Transport Network Coverage"
-                  ? "bg-red-500"
-                  : "bg-yellow-500"
+                  : decision === "SOLID"
+                  ? "bg-yellow-500"
+                  : "bg-red-500"
               }`}
             >
               {decision}

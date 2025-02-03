@@ -8,7 +8,20 @@ function MeanYearsOfSchoolingCalculator() {
   const [durations, setDurations] = useState<number[]>([]); // YS (official duration of education)
   const [meanResult, setMeanResult] = useState<number | null>(null);
   const [standardizedResult, setStandardizedResult] = useState<number | null>(null);
+  const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  const maxYears = 14; // Maximum benchmark
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
@@ -30,7 +43,6 @@ function MeanYearsOfSchoolingCalculator() {
     setMeanResult(meanYearsOfSchooling);
 
     // Standardization logic
-    const maxYears = 14;
     let standardized;
     if (meanYearsOfSchooling >= maxYears) {
       standardized = 100;
@@ -41,9 +53,14 @@ function MeanYearsOfSchoolingCalculator() {
     }
     setStandardizedResult(standardized);
 
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
+
     // Prepare data to send
     const postData = {
       mean_years_of_schooling: meanYearsOfSchooling,
+      mean_years_of_schooling_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -56,9 +73,11 @@ function MeanYearsOfSchoolingCalculator() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -74,7 +93,7 @@ function MeanYearsOfSchoolingCalculator() {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Mean Years of Schooling Calculator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Proportion of Population (%):
@@ -122,6 +141,22 @@ function MeanYearsOfSchoolingCalculator() {
           <h2 className="text-xl font-semibold mb-4">
             Standardized Mean Years of Schooling: {standardizedResult?.toFixed(2)}
           </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

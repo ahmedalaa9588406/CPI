@@ -8,7 +8,18 @@ const SolidWasteCollection: React.FC = () => {
   const [wasteCollected, setWasteCollected] = useState<number | string>(""); // Volume of waste collected
   const [wasteGenerated, setWasteGenerated] = useState<number | string>(""); // Total volume of waste generated
   const [collectionScore, setCollectionScore] = useState<string | null>(null); // Final score
+  const [comment, setComment] = useState<string | null>(null); // Comment based on score
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   // Function to calculate solid waste collection score
   const calculateSolidWasteCollection = () => {
@@ -32,8 +43,12 @@ const SolidWasteCollection: React.FC = () => {
 
     // Formula: Solid waste collection (%) = (Volume of waste collected / Total volume of waste generated) * 100
     const score = (collected / generated) * 100;
-    setCollectionScore(score.toFixed(2)); // Limit to 2 decimal places
-    return score.toFixed(2);
+    const scoreNum = score.toFixed(2); // Limit to 2 decimal places
+    setCollectionScore(scoreNum);
+    const calculatedComment = getComment(parseFloat(scoreNum));
+    setComment(calculatedComment); // Set comment based on score
+    console.log('Calculated Score:', scoreNum, 'Calculated Comment:', calculatedComment);
+    return { scoreNum, calculatedComment };
   };
 
   // Function to handle calculation and saving data
@@ -43,13 +58,19 @@ const SolidWasteCollection: React.FC = () => {
       return;
     }
 
-    const score = calculateSolidWasteCollection();
-    if (score === null) return; // Exit if calculation fails
+    const calculationResult = calculateSolidWasteCollection();
+    if (calculationResult === null) return; // Exit if calculation fails
+
+    const { scoreNum, calculatedComment } = calculationResult;
 
     try {
       setIsSubmitting(true);
+
+      console.log('Before Posting:', 'Score:', scoreNum, 'Comment:', calculatedComment);
+
       const postData = {
-        solid_waste_collection: parseFloat(score), // Post the calculated score
+        solid_waste_collection: parseFloat(scoreNum), // Post the calculated score
+        solid_waste_collection_comment: calculatedComment, // Use the calculated comment
         userId: user.id,
       };
 
@@ -122,11 +143,14 @@ const SolidWasteCollection: React.FC = () => {
         {isSubmitting ? 'Calculating and Saving...' : 'Calculate and Save'}
       </button>
 
-      {collectionScore !== null && (
+      {collectionScore !== null && comment !== null && (
         <div className="mt-4">
           <h3 className="text-lg">
-            Solid Waste Collection Score: {collectionScore}%
+            Solid Waste Collection Score: <span className="font-bold">{collectionScore}%</span>
           </h3>
+          <p className="text-lg font-semibold">
+            Comment: <span className="text-blue-500">{comment}</span>
+          </p>
         </div>
       )}
     </div>

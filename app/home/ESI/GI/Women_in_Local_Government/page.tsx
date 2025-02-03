@@ -13,6 +13,16 @@ const WomenInLocalGovernment: React.FC = () => {
   // Benchmark
   const BENCHMARK = 50; // X* = 50%
 
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
@@ -40,24 +50,16 @@ const WomenInLocalGovernment: React.FC = () => {
     const standardizedValue =
       100 * (1 - Math.abs((womenInLocalGov - BENCHMARK) / BENCHMARK));
 
-    // Decision logic
-    let standardizedRateValue: number = 0; // Default value
-    let evaluationComment: string = "Bad"; // Default value
+    // Get the comment based on the standardized value
+    const evaluationComment = getComment(standardizedValue);
 
-    if (womenInLocalGov > 0 && womenInLocalGov < 2 * BENCHMARK) {
-      standardizedRateValue = standardizedValue;
-      evaluationComment = "Average";
-    } else if (womenInLocalGov === BENCHMARK) {
-      standardizedRateValue = 100;
-      evaluationComment = "Good";
-    }
-
-    setStandardizedRate(standardizedRateValue.toFixed(2));
+    setStandardizedRate(standardizedValue.toFixed(2));
     setEvaluation(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      women_in_local_government:womenInLocalGov,
+      women_in_local_government: womenInLocalGov,
+      women_in_local_government_comment: evaluationComment,
       userId: user.id,
     };
 
@@ -70,9 +72,11 @@ const WomenInLocalGovernment: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");

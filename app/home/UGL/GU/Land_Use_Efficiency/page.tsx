@@ -14,12 +14,24 @@ const LandUseEfficiencyIndicator: React.FC = () => {
   const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
+  const MIN_EFFICIENCY = 0; // Minimum benchmark
+  const MAX_EFFICIENCY = 3; // Maximum benchmark
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const urb_t = parseFloat(urbInit.toString());
     const urb_tn = parseFloat(urbFinal.toString());
     const pop_t = parseFloat(popInit.toString());
@@ -44,37 +56,34 @@ const LandUseEfficiencyIndicator: React.FC = () => {
 
     // Calculate Urban Expansion Growth Rate
     const urbanGrowthRate = Math.pow((urb_tn - urb_t) / urb_t, 1 / y);
+
     // Calculate Population Annual Growth Rate
     const populationGrowthRate = Math.pow((pop_tn - pop_t) / pop_t, 1 / y);
+
     // Calculate Land Use Efficiency
     const efficiency = urbanGrowthRate / populationGrowthRate;
     setLandUseEfficiency(efficiency);
 
-    // Standardization
-    const min = 0;
-    const max = 3;
+    // Standardize the land use efficiency score
     let standardized;
-    if (efficiency >= max) {
+    if (efficiency >= MAX_EFFICIENCY) {
       standardized = 0;
-    } else if (efficiency > min && efficiency < max) {
-      standardized = 100 * ((max - efficiency) / (max - min));
-    } else {
+    } else if (efficiency <= MIN_EFFICIENCY) {
       standardized = 100;
+    } else {
+      standardized =
+        100 * ((MAX_EFFICIENCY - efficiency) / (MAX_EFFICIENCY - MIN_EFFICIENCY));
     }
     setStandardizedEfficiency(standardized);
 
-    // Decision Logic
-    if (efficiency >= 3) {
-      setDecision("Inefficient");
-    } else if (efficiency > 0 && efficiency < 3) {
-      setDecision("Moderate");
-    } else {
-      setDecision("Efficient");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       land_use_efficiency: efficiency,
+      land_use_efficiency_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -87,9 +96,11 @@ const LandUseEfficiencyIndicator: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -105,7 +116,7 @@ const LandUseEfficiencyIndicator: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Land Use Efficiency Indicator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Built-up Area (Initial Year):
@@ -183,9 +194,22 @@ const LandUseEfficiencyIndicator: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Standardized Efficiency: {standardizedEfficiency?.toFixed(2)}
           </h2>
-          <h2 className="text-xl font-semibold">
-            Decision: {decision}
-          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

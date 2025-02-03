@@ -12,26 +12,48 @@ function SufficientLivingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Constants
-  const MIN = 2.50;
-  const MAX = 57.80;
+  const MIN = 2.5;
+  const MAX = 57.8;
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateSufficientLiving = async () => {
     if (!user) {
       alert("Please sign in to save calculations");
       return;
     }
-
     const numericTotalHouseholds = Number(totalHouseholds);
     if (numericTotalHouseholds > 0) {
       const numericDurableHouseholds = Number(durableHouseholds);
       const sufficient_living = (numericDurableHouseholds / numericTotalHouseholds) * 100;
-
-      let standardizedSufficientLiving = 100 * ((Math.pow(sufficient_living, 0.25) - Math.pow(MIN, 0.25)) / 
-        (Math.pow(MAX, 0.25) - Math.pow(MIN, 0.25)));
+      let standardizedSufficientLiving =
+        100 *
+        ((Math.pow(sufficient_living, 0.25) - Math.pow(MIN, 0.25)) /
+          (Math.pow(MAX, 0.25) - Math.pow(MIN, 0.25)));
       standardizedSufficientLiving = Math.min(Math.max(standardizedSufficientLiving, 0), 100);
 
+      // Update state with results
       setSufficientLivingS(standardizedSufficientLiving);
       setResult(sufficient_living.toFixed(2));
+
+      // Evaluate the decision based on the standardized score
+      const evaluationComment = getComment(standardizedSufficientLiving);
+      setDecision(evaluationComment);
+
+      // Prepare data to send
+      const postData = {
+        sufficient_living: sufficient_living,
+        sufficient_living_comment: evaluationComment, // Renamed for consistency
+        userId: user.id,
+      };
 
       try {
         setIsSubmitting(true);
@@ -40,27 +62,20 @@ function SufficientLivingForm() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            sufficient_living: sufficient_living,
-            userId: user.id
-          }),
+          body: JSON.stringify(postData),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to store data');
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        if (sufficient_living >= 2.76) {
-          setDecision("Perfect");
-        } else if (sufficient_living > 1.26) {
-          setDecision("Good");
-        } else {
-          setDecision("Bad");
-        }
-
-      } catch (error) {
-        console.error('Error storing data:', error);
-        alert('Failed to store the calculation result');
+        const result = await response.json();
+        console.log('Result:', result);
+        alert("Data calculated and saved successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('Error saving data:', errorMessage);
+        alert("Failed to save data. Please try again.");
       } finally {
         setIsSubmitting(false);
       }
@@ -119,9 +134,9 @@ function SufficientLivingForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Perfect"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Good"
+                  : decision === "SOLID"
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}

@@ -10,14 +10,23 @@ const LocalExpenditureIndicator: React.FC = () => {
   const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const xStar = 100; // Benchmark value (100%)
+  const X_STAR = 100; // Benchmark value (100%)
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const realExp = parseFloat(realExpenditure.toString());
     const estimatedExp = parseFloat(estimatedExpenditure.toString());
 
@@ -31,34 +40,30 @@ const LocalExpenditureIndicator: React.FC = () => {
       return;
     }
 
+    // Calculate expenditure ratio
     const expenditureRatio = (realExp / estimatedExp) * 100;
 
+    // Standardize the value
     let standardized;
-    if (expenditureRatio === xStar) {
+    if (expenditureRatio === X_STAR) {
       standardized = 100;
-    } else if (expenditureRatio >= 2 * xStar || expenditureRatio === 0) {
+    } else if (expenditureRatio >= 2 * X_STAR || expenditureRatio === 0) {
       standardized = 0;
     } else {
       standardized =
         100 *
-        (1 - Math.abs((expenditureRatio - xStar) / (2 * xStar - xStar)));
+        (1 - Math.abs((expenditureRatio - X_STAR) / (2 * X_STAR - X_STAR)));
     }
     setStandardizedValue(standardized);
 
-    // Decision Logic
-    let decisionText;
-    if (expenditureRatio === 0 || expenditureRatio >= 2 * xStar) {
-      decisionText = "Poor";
-    } else if (expenditureRatio === xStar) {
-      decisionText = "Excellent";
-    } else {
-      decisionText = "Moderate";
-    }
-    setDecision(decisionText);
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      local_expenditure_efficiency: estimatedExp,
+      local_expenditure_efficiency: expenditureRatio,
+      local_expenditure_efficiency_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -71,9 +76,11 @@ const LocalExpenditureIndicator: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -89,7 +96,7 @@ const LocalExpenditureIndicator: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Local Expenditure Indicator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Real Local Expenditure:
@@ -128,9 +135,22 @@ const LocalExpenditureIndicator: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Standardized Value: {standardizedValue.toFixed(2)}
           </h2>
-          <h2 className="text-xl font-semibold">
-            Decision: {decision}
-          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

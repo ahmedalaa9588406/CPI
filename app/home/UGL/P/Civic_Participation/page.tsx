@@ -10,12 +10,21 @@ const CivicParticipation: React.FC = () => {
   const [engagementLevel, setEngagementLevel] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const engaged = parseFloat(engagedPeople.toString());
     const adults = parseFloat(adultPeople.toString());
 
@@ -24,22 +33,18 @@ const CivicParticipation: React.FC = () => {
       return;
     }
 
+    // Calculate participation rate
     const rate = (engaged / adults) * 100;
     setParticipationRate(rate);
 
-    let engagementText;
-    if (rate >= 75) {
-      engagementText = "High Engagement";
-    } else if (rate >= 50) {
-      engagementText = "Moderate Engagement";
-    } else {
-      engagementText = "Low Engagement";
-    }
-    setEngagementLevel(engagementText);
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(rate);
+    setEngagementLevel(evaluationComment);
 
     // Prepare data to send
     const postData = {
       civic_participation: rate,
+      civic_participation_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -52,9 +57,11 @@ const CivicParticipation: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -70,7 +77,7 @@ const CivicParticipation: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Civic Participation Indicator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           People Engaged in Civic Associations:
@@ -109,9 +116,22 @@ const CivicParticipation: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Civic Participation Rate: {participationRate.toFixed(2)}%
           </h2>
-          <h2 className="text-xl font-semibold">
-            Engagement Level: {engagementLevel}
-          </h2>
+          {engagementLevel && (
+            <h2 className="text-xl font-semibold">
+              Engagement Level:{" "}
+              <span
+                className={`${
+                  engagementLevel === "VERY SOLID"
+                    ? "text-green-600"
+                    : engagementLevel === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {engagementLevel}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

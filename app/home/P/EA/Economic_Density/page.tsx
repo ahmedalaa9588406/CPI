@@ -11,14 +11,24 @@ const EconomicDensityCalculator: React.FC = () => {
   const [decision, setDecision] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
+  // Constants
   const benchmark = 857.37; // X* benchmark in million PPP/km²
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     if (!cityArea || cityArea === 0) {
       alert("City area cannot be zero.");
       return;
@@ -41,18 +51,14 @@ const EconomicDensityCalculator: React.FC = () => {
     }
     setStandardizedEconomicDensity(standardized);
 
-    // Decision Logic
-    if (density >= benchmark) {
-      setDecision("Good");
-    } else if (density > 0 && density < benchmark) {
-      setDecision("Moderate");
-    } else {
-      setDecision("Bad");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       economic_density: density,
+      economic_density_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -65,9 +71,11 @@ const EconomicDensityCalculator: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -83,7 +91,7 @@ const EconomicDensityCalculator: React.FC = () => {
   return (
     <div className="max-w-lg mx-auto p-10 bg-white shadow-lg rounded-2xl">
       <h1 className="text-3xl font-bold mb-6 text-center">Economic Density Calculator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           City Product (in million PPP):
@@ -129,9 +137,9 @@ const EconomicDensityCalculator: React.FC = () => {
             Decision:{" "}
             <span
               className={`${
-                decision === "Good"
+                decision === "VERY SOLID"
                   ? "text-green-600"
-                  : decision === "Moderate"
+                  : decision === "SOLID"
                   ? "text-yellow-600"
                   : "text-red-600"
               }`}

@@ -8,8 +8,18 @@ const SolidWasteRecyclingShare: React.FC = () => {
   const [wasteRecycled, setWasteRecycled] = useState<number | string>(""); // Volume of waste recycled
   const [wasteCollected, setWasteCollected] = useState<number | string>(""); // Total volume of waste collected
   const [recyclingScore, setRecyclingScore] = useState<string | null>(null); // Final score
-  const [comment, setComment] = useState<string | null>(null); // Comment on the score
+  const [comment, setComment] = useState<string | null>(null); // Comment based on score
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   // Function to calculate recycling share
   const calculateRecyclingShare = () => {
@@ -35,20 +45,20 @@ const SolidWasteRecyclingShare: React.FC = () => {
     const initialShare = (recycled / collected) * 100;
 
     let standardScore: number;
-    let performanceComment: string;
 
     // Apply the standardization formula
     if (initialShare >= 50) {
       standardScore = 100;
-      performanceComment = "Excellent";
     } else {
       standardScore = 100 * (1 - Math.abs(initialShare - 50) / 50);
-      performanceComment = initialShare >= 25 ? "Moderate" : "Bad";
     }
 
-    setRecyclingScore(standardScore.toFixed(2)); // Limit to 2 decimal places
-    setComment(performanceComment); // Set the performance comment
-    return initialShare; // Return the initial recycling share for posting
+    const scoreNum = standardScore.toFixed(2); // Limit to 2 decimal places
+    setRecyclingScore(scoreNum);
+    const calculatedComment = getComment(parseFloat(scoreNum));
+    setComment(calculatedComment); // Set comment based on score
+    console.log('Calculated Score:', scoreNum, 'Calculated Comment:', calculatedComment);
+    return { scoreNum, calculatedComment };
   };
 
   // Function to handle calculation and saving data
@@ -58,15 +68,18 @@ const SolidWasteRecyclingShare: React.FC = () => {
       return;
     }
 
-    const initialShare = calculateRecyclingShare();
-    if (initialShare === null) return; // Exit if calculation fails
+    const calculationResult = calculateRecyclingShare();
+    if (calculationResult === null) return; // Exit if calculation fails
+
+    const { scoreNum, calculatedComment } = calculationResult;
 
     try {
       setIsSubmitting(true); // Start loading
       console.log("Submitting data...");
 
       const postData = {
-        solid_waste_recycling_share: initialShare, // Post the initial recycling share
+        solid_waste_recycling_share: parseFloat(scoreNum), // Post the standardized score
+        solid_waste_recycling_share_comment: calculatedComment, // Use the calculated comment
         userId: user.id,
       };
 
@@ -146,9 +159,11 @@ const SolidWasteRecyclingShare: React.FC = () => {
 
       {recyclingScore !== null && comment !== null && (
         <div className="mt-4">
-          <h3 className="text-lg">Solid Waste Recycling Share: {recyclingScore}%</h3>
+          <h3 className="text-lg">
+            Solid Waste Recycling Share: <span className="font-bold">{recyclingScore}%</span>
+          </h3>
           <p className="text-lg font-semibold">
-            Performance: <span className="text-blue-500">{comment}</span>
+            Comment: <span className="text-blue-500">{comment}</span>
           </p>
         </div>
       )}

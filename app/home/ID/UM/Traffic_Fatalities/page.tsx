@@ -15,20 +15,27 @@ function TrafficFatalitiesForm() {
   const minBenchmark = 1; // Min fatalities per 100,000 people
   const maxBenchmark = 31; // Max fatalities per 100,000 people
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericTotalFatalities = parseFloat(totalFatalities);
     const numericCityPopulation = parseFloat(cityPopulation);
-
     if (isNaN(numericTotalFatalities) || isNaN(numericCityPopulation)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
-
     if (numericTotalFatalities <= 0 || numericCityPopulation <= 0) {
       alert("Both total fatalities and city population must be positive numbers.");
       return;
@@ -51,18 +58,14 @@ function TrafficFatalitiesForm() {
     }
     setStandardizedScore(standardizedScoreValue);
 
-    // Decision based on the standardized score
-    if (fatalitiesPer100kValue >= maxBenchmark) {
-      setDecision("High Traffic Fatalities");
-    } else if (fatalitiesPer100kValue < minBenchmark) {
-      setDecision("Very Low Traffic Fatalities");
-    } else {
-      setDecision("Moderate Traffic Fatalities");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedScoreValue);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       traffic_fatalities: fatalitiesPer100kValue,
+      traffic_fatalities_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -75,9 +78,11 @@ function TrafficFatalitiesForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -95,7 +100,7 @@ function TrafficFatalitiesForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Traffic Fatalities Calculator
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Traffic Fatalities per Year:
@@ -144,11 +149,11 @@ function TrafficFatalitiesForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "High Traffic Fatalities"
-                  ? "bg-red-500"
-                  : decision === "Very Low Traffic Fatalities"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : "bg-yellow-500"
+                  : decision === "SOLID"
+                  ? "bg-yellow-500"
+                  : "bg-red-500"
               }`}
             >
               {decision}

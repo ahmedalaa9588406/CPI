@@ -14,20 +14,27 @@ function StreetIntersectionDensityForm() {
   // Constants
   const BENCHMARK = 100; // Benchmark density value (intersections per km²)
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericIntersectionCount = parseFloat(intersectionCount);
     const numericUrbanArea = parseFloat(urbanArea);
-
     if (isNaN(numericIntersectionCount) || isNaN(numericUrbanArea)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
-
     if (numericIntersectionCount <= 0 || numericUrbanArea <= 0) {
       alert("Both intersection count and urban area must be positive numbers.");
       return;
@@ -54,18 +61,14 @@ function StreetIntersectionDensityForm() {
     }
     setStandardizedScore(standardizedScoreValue);
 
-    // Decision
-    if (streetIntersectionDensity < 0) {
-      setDecision("Invalid street intersection density.");
-    } else if (streetIntersectionDensity >= BENCHMARK) {
-      setDecision("Intersection density is excellent.");
-    } else {
-      setDecision("Intersection density is below the desired benchmark.");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedScoreValue);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       street_intersection_density: streetIntersectionDensity,
+      street_intersection_density_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -78,9 +81,11 @@ function StreetIntersectionDensityForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -98,7 +103,7 @@ function StreetIntersectionDensityForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Street Intersection Density Calculator
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Number of Intersections:
@@ -147,10 +152,9 @@ function StreetIntersectionDensityForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Intersection density is excellent."
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision ===
-                    "Intersection density is below the desired benchmark."
+                  : decision === "SOLID"
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}

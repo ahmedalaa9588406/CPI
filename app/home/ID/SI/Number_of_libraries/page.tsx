@@ -2,18 +2,28 @@
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
 
-function PublicLibrariesForm() {
+const PublicLibrariesForm: React.FC = () => {
   const { user, isLoaded } = useUser();
   const [numLibraries, setNumLibraries] = useState<string>("");
   const [totalPopulation, setTotalPopulation] = useState<string>("");
   const [librariesDensity, setLibrariesDensity] = useState<string | null>(null);
   const [standardizedLibraries, setStandardizedLibraries] = useState<number | null>(null);
-  const [decision, setDecision] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants for standardization
   const MIN = 1; // Minimum benchmark for libraries density
   const MAX = 7; // Maximum benchmark for libraries density
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
@@ -26,7 +36,6 @@ function PublicLibrariesForm() {
       alert("Total population must be greater than zero.");
       return;
     }
-
     const numericLibraries = Number(numLibraries);
     if (isNaN(numericLibraries) || isNaN(numericPopulation)) {
       alert("Please enter valid numbers for both fields.");
@@ -44,18 +53,15 @@ function PublicLibrariesForm() {
     }
     setStandardizedLibraries(standardizedDensity);
 
-    // Decision-making
-    if (density >= MAX) {
-      setDecision("Excellent");
-    } else if (density > MIN && density < MAX) {
-      setDecision("Good");
-    } else {
-      setDecision("Needs Improvement");
-    }
+    // Decision logic using getComment function
+    const evaluationComment: string = getComment(standardizedDensity);
+
+    setEvaluation(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      number_of_public_libraries:density,
+      number_of_public_libraries: density,
+      number_of_public_libraries_comment: evaluationComment,
       userId: user.id,
     };
 
@@ -68,9 +74,11 @@ function PublicLibrariesForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -131,23 +139,24 @@ function PublicLibrariesForm() {
           <ul className="list-disc pl-5">
             <li>Standardized Score: {standardizedLibraries?.toFixed(2)}%</li>
           </ul>
-          {decision && (
+          {evaluation && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Excellent"
-                  ? "bg-green-500"
-                  : decision === "Good"
-                  ? "bg-yellow-500"
-                  : "bg-red-500"
+                evaluation === "VERY SOLID" ? "bg-green-500" :
+                evaluation === "SOLID" ? "bg-yellow-500" :
+                evaluation === "MODERATELY SOLID" ? "bg-yellow-500" :
+                evaluation === "MODERATELY WEAK" ? "bg-orange-500" :
+                evaluation === "WEAK" ? "bg-red-500" :
+                "bg-red-500"
               }`}
             >
-              {decision}
+              {evaluation}
             </p>
           )}
         </div>
       )}
     </div>
   );
-}
+};
 
 export default PublicLibrariesForm;

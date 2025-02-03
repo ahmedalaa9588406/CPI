@@ -1,5 +1,3 @@
-// app\home\ES\AQ\CO2_Emissions\page.tsx
-
 "use client";
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
@@ -8,7 +6,7 @@ const CO2Emissions: React.FC = () => {
   const { user, isLoaded } = useUser();
   const [co2Emissions, setCo2Emissions] = useState<number | string>(""); // Input: CO2 emissions
   const [standardizedScore, setStandardizedScore] = useState<string | null>(null); // Standardized score
-  const [evaluation, setEvaluation] = useState<string | null>(null); // Decision evaluation
+  const [comment, setComment] = useState<string | null>(null); // Comment based on score
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
   const BENCHMARK = 0.39; // Benchmark value for CO2 emissions
   const CRITICAL = 2.09; // Critical threshold for CO2 emissions
@@ -25,19 +23,30 @@ const CO2Emissions: React.FC = () => {
 
     if (fifthRootEmissions >= CRITICAL) {
       standardizedValue = 0;
-      setEvaluation("Poor");
     } else if (fifthRootEmissions > BENCHMARK && fifthRootEmissions < CRITICAL) {
       standardizedValue =
         100 *
         (1 - Math.abs((fifthRootEmissions - BENCHMARK) / (CRITICAL - BENCHMARK)));
-      setEvaluation("Moderate");
     } else if (fifthRootEmissions <= BENCHMARK) {
       standardizedValue = 100;
-      setEvaluation("Excellent");
     }
 
-    setStandardizedScore(standardizedValue.toFixed(2));
-    return standardizedValue.toFixed(2);
+    const scoreNum = standardizedValue.toFixed(2);
+    setStandardizedScore(scoreNum);
+    const calculatedComment = getComment(parseFloat(scoreNum));
+    setComment(calculatedComment); // Set comment immediately after calculating score
+    console.log('Calculated Score:', scoreNum, 'Calculated Comment:', calculatedComment);
+    return { scoreNum, calculatedComment };
+  };
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
   };
 
   // Function to handle calculation and posting data
@@ -47,18 +56,22 @@ const CO2Emissions: React.FC = () => {
       return;
     }
 
-    const score = calculateCO2Score();
-    if (score === null) return; // Exit if calculation fails
+    const calculationResult = calculateCO2Score();
+    if (calculationResult === null) return; // Exit if calculation fails
 
+    const { scoreNum, calculatedComment } = calculationResult;
     const co2Value = parseFloat(co2Emissions.toString());
 
     try {
       setIsSubmitting(true);
+
+      console.log('Before Posting:', 'Score:', scoreNum, 'Comment:', calculatedComment);
+
       const postData = {
         co2_emissions: co2Value,
+        co2_emissions_comment: calculatedComment, // Use the calculated comment
         userId: user.id
       };
-
       const response = await fetch('/api/calculation-history', {
         method: 'POST',
         headers: {
@@ -66,11 +79,9 @@ const CO2Emissions: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
-
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
       const result = await response.json();
       alert("Data calculated and saved successfully!");
       console.log('Result:', result);
@@ -110,7 +121,7 @@ const CO2Emissions: React.FC = () => {
             Standardized Score: {standardizedScore}
           </h3>
           <h3 className="text-lg">
-            Evaluation: {evaluation}
+            Comment: {comment}
           </h3>
         </div>
       )}

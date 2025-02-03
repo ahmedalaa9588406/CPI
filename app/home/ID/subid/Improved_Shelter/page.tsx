@@ -15,20 +15,42 @@ function ImprovedShelterForm() {
   const MIN = 84.8;
   const MAX = 98.4;
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 90) return "VERY SOLID";
+    else if (score >= 80) return "SOLID";
+    else if (score >= 70) return "MODERATELY SOLID";
+    else if (score >= 60) return "MODERATELY WEAK";
+    else if (score >= 50) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateImprovedShelter = async () => {
     if (!user) {
       alert("Please sign in to save calculations");
       return;
     }
-
     const numericTotalHouseholds = Number(totalHouseholds);
     if (numericTotalHouseholds > 0) {
       const numericDurableHouseholds = Number(durableHouseholds);
       const improvedShelter = (numericDurableHouseholds / numericTotalHouseholds) * 100;
-      const standardizedImprovedShelter = Math.min(Math.max(100 * ((improvedShelter - MIN) / (MAX - MIN)), 0), 100);
+      let standardizedImprovedShelter = 100 * ((improvedShelter - MIN) / (MAX - MIN));
+      standardizedImprovedShelter = Math.min(Math.max(standardizedImprovedShelter, 0), 100);
 
+      // Update state with results
       setImprovedShelterS(standardizedImprovedShelter);
       setResult(improvedShelter.toFixed(2));
+
+      // Evaluate the decision based on the standardized score
+      const evaluationComment = getComment(standardizedImprovedShelter);
+      setDecision(evaluationComment);
+
+      // Prepare data to send
+      const postData = {
+        improved_shelter: improvedShelter,
+        improved_shelter_comment: evaluationComment,
+        userId: user.id,
+      };
 
       try {
         setIsSubmitting(true);
@@ -37,30 +59,20 @@ function ImprovedShelterForm() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            improved_shelter: improvedShelter,
-            userId: user.id
-          }),
+          body: JSON.stringify(postData),
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to store data');
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        // Set decision after successful save
-        if (standardizedImprovedShelter >= 98.4) {
-          setDecision("Perfect");
-        } else if (standardizedImprovedShelter >= 84.8) {
-          setDecision("Good");
-        } else {
-          setDecision("Bad");
-        }
-
-      } catch (error) {
-        console.error('Error storing data:', error);
-        alert('Failed to store the calculation result: ' + (error as Error).message);
+        const result = await response.json();
+        console.log('Result:', result);
+        alert("Data calculated and saved successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('Error saving data:', errorMessage);
+        alert("Failed to save data. Please try again.");
       } finally {
         setIsSubmitting(false);
       }
@@ -119,9 +131,9 @@ function ImprovedShelterForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Perfect"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Good"
+                  : decision === "SOLID"
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}

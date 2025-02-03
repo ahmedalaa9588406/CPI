@@ -15,20 +15,27 @@ function LandAllocatedToStreetsCalculator() {
   const MIN = 6; // Minimum benchmark percentage
   const MAX = 36; // Maximum benchmark percentage
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericUrbanSurfaceStreets = parseFloat(urbanSurfaceStreets);
     const numericTotalUrbanArea = parseFloat(totalUrbanArea);
-
     if (isNaN(numericUrbanSurfaceStreets) || isNaN(numericTotalUrbanArea)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
-
     if (numericUrbanSurfaceStreets <= 0 || numericTotalUrbanArea <= 0) {
       alert(
         "Both urban surface allocated to streets and total urban area must be positive numbers."
@@ -53,20 +60,14 @@ function LandAllocatedToStreetsCalculator() {
     }
     setStandardizedScore(standardizedScoreValue);
 
-    // Decision
-    if (landAllocated <= MIN) {
-      setDecision("Land allocated to streets is below the minimum benchmark.");
-    } else if (landAllocated >= MAX) {
-      setDecision("Land allocated to streets meets or exceeds the benchmark.");
-    } else {
-      setDecision(
-        "Land allocated to streets is within the acceptable range."
-      );
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedScoreValue);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      land_allocated_to_streets:landAllocated,
+      land_allocated_to_streets: landAllocated,
+      land_allocated_to_streets_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -79,9 +80,11 @@ function LandAllocatedToStreetsCalculator() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -99,7 +102,7 @@ function LandAllocatedToStreetsCalculator() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Land Allocated to Streets Calculator
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Surface of Urban Streets (in km²):
@@ -148,11 +151,9 @@ function LandAllocatedToStreetsCalculator() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision ===
-                "Land allocated to streets meets or exceeds the benchmark."
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision ===
-                    "Land allocated to streets is within the acceptable range."
+                  : decision === "SOLID"
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}

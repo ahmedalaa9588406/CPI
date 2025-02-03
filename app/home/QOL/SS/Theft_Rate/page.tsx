@@ -14,15 +14,22 @@ const TheftRateStandardization: React.FC = () => {
   const MAX = 6159.11;
   const ROOT_MIN = Math.pow(MIN, 0.25);
   const ROOT_MAX = Math.pow(MAX, 0.25);
-  const ROOT_THRESHOLD_LOW = 2.24;
-  const ROOT_THRESHOLD_HIGH = 8.86;
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const theftsCount = parseFloat(thefts);
     const populationCount = parseFloat(population);
 
@@ -35,23 +42,26 @@ const TheftRateStandardization: React.FC = () => {
     const theftRate = (100000 * theftsCount) / populationCount;
     const rootTheftRate = Math.pow(theftRate, 0.25);
 
+    // Standardize the theft rate score
     let standardized;
-    if (rootTheftRate >= ROOT_THRESHOLD_HIGH) {
+    if (rootTheftRate >= ROOT_MAX) {
       standardized = 0;
-      setDecision("Bad - Very High Theft Rate");
-    } else if (rootTheftRate > ROOT_THRESHOLD_LOW) {
+    } else if (rootTheftRate <= ROOT_MIN) {
+      standardized = 100;
+    } else {
       standardized =
         100 * (1 - (rootTheftRate - ROOT_MIN) / (ROOT_MAX - ROOT_MIN));
-      setDecision("In Between - Moderate Theft Rate");
-    } else {
-      standardized = 100;
-      setDecision("Good - Low Theft Rate");
     }
     setStandardizedRate(standardized);
+
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       theft_rate: theftRate,
+      theft_rate_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -64,9 +74,11 @@ const TheftRateStandardization: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -82,7 +94,7 @@ const TheftRateStandardization: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Theft Rate Standardization</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Number of Thefts:
@@ -121,9 +133,22 @@ const TheftRateStandardization: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Standardized Theft Rate: {standardizedRate.toFixed(2)}
           </h2>
-          <h2 className="text-xl font-semibold">
-            Decision: {decision}
-          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

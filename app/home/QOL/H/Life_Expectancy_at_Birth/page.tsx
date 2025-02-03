@@ -11,12 +11,23 @@ interface LifeTableRow {
 function LifeExpectancyCalculator() {
   const { user, isLoaded } = useUser();
   const [data, setData] = useState<LifeTableRow[]>([{ age: "", lx: "", tx: "" }]);
-  const [lifeExpectancy, setLifeExpectancy] = useState<string | null>(null);
-  const [standardizedScore, setStandardizedScore] = useState<string | null>(null);
+  const [lifeExpectancy, setLifeExpectancy] = useState<number | null>(null);
+  const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
+  const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const MIN_LIFE_EXPECTANCY = 49;
-  const MAX_LIFE_EXPECTANCY = 83.48;
+  const MIN_LIFE_EXPECTANCY = 49; // Minimum benchmark
+  const MAX_LIFE_EXPECTANCY = 83.48; // Maximum benchmark
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   // Function to update data for each row
   const updateRow = (index: number, field: keyof LifeTableRow, value: string) => {
@@ -51,63 +62,74 @@ function LifeExpectancyCalculator() {
       const lx = parseFloat(row.lx);
       const tx = parseFloat(row.tx);
 
-      if (!isNaN(lx) && !isNaN(tx)) {
-        t0 += tx; // Accumulate total years lived
-        if (l0 === 0) l0 = lx; // Set l0 from the first row (age 0)
+      if (isNaN(lx) || isNaN(tx)) {
+        alert("Please ensure all fields are filled with valid numbers.");
+        return;
       }
+
+      t0 += tx; // Accumulate total years lived
+      if (l0 === 0) l0 = lx; // Set l0 from the first row (age 0)
     }
 
-    if (l0 > 0) {
-      const e0 = t0 / l0; // Calculate life expectancy
-      setLifeExpectancy(e0.toFixed(2));
+    if (l0 <= 0) {
+      alert("The number of people alive at age 0 (l0) must be greater than zero.");
+      return;
+    }
 
-      // Calculate the standardized score
-      const standardized = Math.min(
+    const e0 = t0 / l0; // Calculate life expectancy
+    setLifeExpectancy(e0);
+
+    // Standardize the life expectancy score
+    const standardized =
+      Math.min(
         100,
         Math.max(
           0,
           ((e0 - MIN_LIFE_EXPECTANCY) / (MAX_LIFE_EXPECTANCY - MIN_LIFE_EXPECTANCY)) * 100
         )
       );
-      setStandardizedScore(standardized.toFixed(2));
+    setStandardizedScore(standardized);
 
-      // Prepare data to send
-      const postData = {
-        life_expectancy_at_birth: e0,
-        userId: user.id,
-      };
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
-      try {
-        setIsSubmitting(true);
-        const response = await fetch('/api/calculation-history', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(postData),
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const result = await response.json();
-        console.log('Result:', result);
-        alert("Data calculated and saved successfully!");
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        console.error('Error saving data:', errorMessage);
-        alert("Failed to save data. Please try again.");
-      } finally {
-        setIsSubmitting(false);
+    // Prepare data to send
+    const postData = {
+      life_expectancy_at_birth: e0,
+      life_expectancy_at_birth_comment: evaluationComment, // Renamed for consistency
+      userId: user.id,
+    };
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch('/api/calculation-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-    } else {
-      alert("Please ensure valid values for the number of people alive at age 0 (l0).");
+
+      const result = await response.json();
+      console.log('Result:', result);
+      alert("Data calculated and saved successfully!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error saving data:', errorMessage);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-4">Life Expectancy Calculator</h1>
-
       <table className="w-full mb-4 border-collapse border border-gray-400">
         <thead>
           <tr>
@@ -150,7 +172,6 @@ function LifeExpectancyCalculator() {
           ))}
         </tbody>
       </table>
-
       <div className="mb-4">
         <button
           onClick={addRow}
@@ -165,7 +186,6 @@ function LifeExpectancyCalculator() {
           Remove Age Band
         </button>
       </div>
-
       <button
         onClick={calculateLifeExpectancy}
         disabled={isSubmitting}
@@ -175,15 +195,28 @@ function LifeExpectancyCalculator() {
       >
         {isSubmitting ? 'Calculating and Saving...' : 'Calculate Life Expectancy'}
       </button>
-
-      {lifeExpectancy && (
+      {lifeExpectancy !== null && (
         <div className="mt-4">
           <p className="text-xl font-bold">
-            Life Expectancy at Birth (\( e_0 \)): {lifeExpectancy} years
+            Life Expectancy at Birth (\( e_0 \)): {lifeExpectancy.toFixed(2)} years
           </p>
-          {standardizedScore && (
-            <p className="text-lg font-semibold mt-2">
-              Standardized Score: {standardizedScore}%
+          <p className="text-lg font-semibold mt-2">
+            Standardized Score: {standardizedScore?.toFixed(2)}%
+          </p>
+          {decision && (
+            <p className="text-lg font-bold mt-2">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
             </p>
           )}
         </div>

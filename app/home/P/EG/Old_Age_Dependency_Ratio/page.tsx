@@ -14,12 +14,21 @@ const OldAgeDependencyCalculator: React.FC = () => {
   const minLogValue = Math.log(2.92); // Minimum log value
   const maxLogValue = Math.log(40.53); // Maximum log value
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     if (!peopleAged15to64 || peopleAged15to64 === 0) {
       alert("The number of people aged 15 to 64 cannot be zero.");
       return;
@@ -38,18 +47,14 @@ const OldAgeDependencyCalculator: React.FC = () => {
     const standardized = 100 * (1 - (lnRatio - minLogValue) / (maxLogValue - minLogValue));
     setStandardizedRatio(standardized);
 
-    // Decision Logic
-    if (lnRatio >= 3.7) {
-      setDecision("Bad");
-    } else if (lnRatio > 1.07 && lnRatio < 3.7) {
-      setDecision("Moderate");
-    } else {
-      setDecision("Good");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       old_age_dependency_ratio: dependencyRatio,
+      old_age_dependency_ratio_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -62,9 +67,11 @@ const OldAgeDependencyCalculator: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -77,12 +84,10 @@ const OldAgeDependencyCalculator: React.FC = () => {
     }
   };
 
-
-
   return (
     <div className="max-w-md mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-4">Old Age Dependency Ratio Calculator</h1>
-      
+
       <div className="mb-4">
         <label className="block mb-2 font-semibold">People aged 65 and over:</label>
         <input
@@ -120,7 +125,20 @@ const OldAgeDependencyCalculator: React.FC = () => {
           <h2 className="text-lg font-semibold">
             Standardized Ratio: {standardizedRatio.toFixed(2)}
           </h2>
-          <h2 className="text-lg font-semibold">Decision: {decision}</h2>
+          <h2 className="text-lg font-semibold">
+            Decision:{" "}
+            <span
+              className={`font-bold ${
+                decision === "VERY SOLID"
+                  ? "text-green-600"
+                  : decision === "SOLID"
+                  ? "text-yellow-600"
+                  : "text-red-600"
+              }`}
+            >
+              {decision}
+            </span>
+          </h2>
         </div>
       )}
     </div>

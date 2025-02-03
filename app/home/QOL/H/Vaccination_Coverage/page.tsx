@@ -7,14 +7,28 @@ function VaccinationCoverageCalculator() {
   const [immunizedPopulation, setImmunizedPopulation] = useState<string>("");
   const [eligiblePopulation, setEligiblePopulation] = useState<string>("");
   const [vaccinationCoverage, setVaccinationCoverage] = useState<number | null>(null);
+  const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
+  const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  const MIN_COVERAGE = 50; // Minimum benchmark
+  const MAX_COVERAGE = 100; // Maximum benchmark
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const immunized = parseFloat(immunizedPopulation);
     const eligible = parseFloat(eligiblePopulation);
 
@@ -29,9 +43,26 @@ function VaccinationCoverageCalculator() {
     }
     setVaccinationCoverage(coverage);
 
+    // Standardize the vaccination coverage score
+    let standardized;
+    if (coverage >= MAX_COVERAGE) {
+      standardized = 100;
+    } else if (coverage <= MIN_COVERAGE) {
+      standardized = 0;
+    } else {
+      standardized =
+        100 * ((coverage - MIN_COVERAGE) / (MAX_COVERAGE - MIN_COVERAGE));
+    }
+    setStandardizedScore(standardized);
+
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
+
     // Prepare data to send
     const postData = {
       vaccination_coverage: coverage,
+      vaccination_coverage_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -44,9 +75,11 @@ function VaccinationCoverageCalculator() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -62,7 +95,7 @@ function VaccinationCoverageCalculator() {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Vaccination Coverage Calculator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Population Immunized (according to national policies):
@@ -101,6 +134,25 @@ function VaccinationCoverageCalculator() {
           <h2 className="text-xl font-semibold mb-4">
             Vaccination Coverage: {vaccinationCoverage.toFixed(2)}%
           </h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Standardized Score: {standardizedScore?.toFixed(2)}
+          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

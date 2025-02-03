@@ -7,14 +7,24 @@ const VoterTurnout: React.FC = () => {
   const [votersWhoCastBallot, setVotersWhoCastBallot] = useState<number | string>(""); // Input for voters who cast a ballot
   const [eligibleVoters, setEligibleVoters] = useState<number | string>(""); // Input for number of eligible voters
   const [voterTurnout, setVoterTurnout] = useState<number | null>(null);
+  const [turnoutLevel, setTurnoutLevel] = useState<string | null>(null); // Qualitative evaluation
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const castBallot = parseFloat(votersWhoCastBallot.toString());
     const eligible = parseFloat(eligibleVoters.toString());
 
@@ -23,12 +33,18 @@ const VoterTurnout: React.FC = () => {
       return;
     }
 
+    // Calculate voter turnout
     const turnout = (castBallot / eligible) * 100;
     setVoterTurnout(turnout);
+
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(turnout);
+    setTurnoutLevel(evaluationComment);
 
     // Prepare data to send
     const postData = {
       voter_turnout: turnout,
+      voter_turnout_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -41,9 +57,11 @@ const VoterTurnout: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -59,7 +77,7 @@ const VoterTurnout: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Voter Turnout Calculator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Voters Who Cast a Ballot:
@@ -98,6 +116,22 @@ const VoterTurnout: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Voter Turnout: {voterTurnout.toFixed(2)}%
           </h2>
+          {turnoutLevel && (
+            <h2 className="text-xl font-semibold">
+              Turnout Level:{" "}
+              <span
+                className={`${
+                  turnoutLevel === "VERY SOLID"
+                    ? "text-green-600"
+                    : turnoutLevel === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {turnoutLevel}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

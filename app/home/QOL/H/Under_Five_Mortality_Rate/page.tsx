@@ -14,12 +14,21 @@ function UnderFiveMortalityRateCalculator() {
   const MIN_U5MR = 2.20; // Minimum U5MR benchmark
   const MAX_U5MR = 181.60; // Maximum U5MR benchmark
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const deaths = parseFloat(underFiveDeaths);
     const births = parseFloat(liveBirths);
 
@@ -34,35 +43,27 @@ function UnderFiveMortalityRateCalculator() {
     // Standardized Score Calculation
     const lnU5MR = Math.log(u5mrValue);
     let standardized = 0;
-    if (lnU5MR >= Math.log(5.20)) {
+    if (lnU5MR >= Math.log(MAX_U5MR)) {
       standardized = 0;
-    } else if (Math.log(0.79) <= lnU5MR && lnU5MR < Math.log(5.20)) {
+    } else if (lnU5MR <= Math.log(MIN_U5MR)) {
+      standardized = 100;
+    } else {
       standardized =
         100 *
         (1 -
           (lnU5MR - Math.log(MIN_U5MR)) /
             (Math.log(MAX_U5MR) - Math.log(MIN_U5MR)));
-    } else if (lnU5MR < Math.log(0.79)) {
-      standardized = 100;
     }
     setStandardizedScore(standardized);
 
-    // Decision Based on Standardized Score
-    let decisionText = "";
-    if (lnU5MR >= Math.log(5.20)) {
-      decisionText = "Critical";
-    } else if (Math.log(0.79) <= lnU5MR && lnU5MR < Math.log(5.20)) {
-      decisionText = "Requires Attention";
-    } else if (lnU5MR < Math.log(0.79)) {
-      decisionText = "Excellent";
-    }
-    setDecision(decisionText);
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
-
       under_five_mortality_rate: u5mrValue,
-
+      under_five_mortality_rate_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -75,9 +76,11 @@ function UnderFiveMortalityRateCalculator() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -93,7 +96,7 @@ function UnderFiveMortalityRateCalculator() {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Under-Five Mortality Rate (U5MR) Calculator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Number of Under-Five Deaths:
@@ -135,9 +138,22 @@ function UnderFiveMortalityRateCalculator() {
           <h2 className="text-xl font-semibold mb-4">
             Standardized Score: {standardizedScore?.toFixed(2)}
           </h2>
-          <h2 className="text-xl font-semibold">
-            Decision: {decision}
-          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

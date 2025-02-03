@@ -2,18 +2,28 @@
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
 
-function PhysicianDensityForm() {
+const PhysicianDensityForm: React.FC = () => {
   const { user, isLoaded } = useUser();
   const [physicians, setPhysicians] = useState<string>("");
   const [totalPopulation, setTotalPopulation] = useState<string>("");
   const [physicianDensity, setPhysicianDensity] = useState<string | null>(null);
   const [standardizedDensity, setStandardizedDensity] = useState<number | null>(null);
-  const [decision, setDecision] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Constants for benchmarking
   const MIN = 0.01;
   const MAX = 7.74;
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
@@ -26,7 +36,6 @@ function PhysicianDensityForm() {
       alert("Total population must be greater than zero.");
       return;
     }
-
     const numericPhysicians = Number(physicians);
     if (isNaN(numericPhysicians) || isNaN(numericPopulation)) {
       alert("Please enter valid numbers for both fields.");
@@ -44,18 +53,15 @@ function PhysicianDensityForm() {
     }
     setStandardizedDensity(standardized);
 
-    // Determine decision message
-    if (Math.sqrt(density) >= Math.sqrt(MAX)) {
-      setDecision("Perfect");
-    } else if (Math.sqrt(density) > Math.sqrt(MIN) && Math.sqrt(density) < Math.sqrt(MAX)) {
-      setDecision("Good");
-    } else {
-      setDecision("Poor");
-    }
+    // Decision logic using getComment function
+    const evaluationComment: string = getComment(standardized);
+
+    setEvaluation(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      physician_density:density,
+      physician_density: density,
+      physician_density_comment: evaluationComment,
       userId: user.id,
     };
 
@@ -68,9 +74,11 @@ function PhysicianDensityForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -125,27 +133,28 @@ function PhysicianDensityForm() {
       {physicianDensity !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">
           <p className="text-lg">Physician Density: {physicianDensity} per 1,000 people</p>
-          <p className="text-sm text-gray-600">Standardized Physician Density (S):</p>
+          <p className="text-sm text-gray-600">Standardized Physician Density:</p>
           <ul className="list-disc pl-5">
             <li>Standardized Value: {standardizedDensity?.toFixed(2)}%</li>
           </ul>
-          {decision && (
+          {evaluation && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Perfect"
-                  ? "bg-green-500"
-                  : decision === "Good"
-                  ? "bg-yellow-500"
-                  : "bg-red-500"
+                evaluation === "VERY SOLID" ? "bg-green-500" :
+                evaluation === "SOLID" ? "bg-yellow-500" :
+                evaluation === "MODERATELY SOLID" ? "bg-yellow-500" :
+                evaluation === "MODERATELY WEAK" ? "bg-orange-500" :
+                evaluation === "WEAK" ? "bg-red-500" :
+                "bg-red-500"
               }`}
             >
-              {decision}
+              {evaluation}
             </p>
           )}
         </div>
       )}
     </div>
   );
-}
+};
 
 export default PhysicianDensityForm;

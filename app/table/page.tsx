@@ -207,11 +207,28 @@ const categories: Category[] = [
       { name: "ict", description: "Overall ICT Score" },
     ]
   },
+  {
+    name: "Overall CPI",
+    fields: [
+      { name: "cpi", description: "City Prosperity Index" },
+    ]
+  }
 ];
+
+const getComment = (score: number | string): string => {
+  if (score === '-' || typeof score !== 'number') return '-';
+  
+  if (score >= 80) return "VERY SOLID";
+  else if (score >= 70) return "SOLID";
+  else if (score >= 60) return "MODERATELY SOLID";
+  else if (score >= 50) return "MODERATELY WEAK";
+  else if (score >= 40) return "WEAK";
+  else return "VERY WEAK";
+};
 
 export default function ContentTable() {
   type CalculationData = {
-    [key: string]: number;
+    [key: string]: number | string;
   };
 
   const [calculationData, setCalculationData] = useState<CalculationData | null>(null);
@@ -895,6 +912,57 @@ export default function ContentTable() {
     return average;
   };
 
+  const calculateCPI = (data: CalculationData | null) => {
+    if (!data) return '-';
+    
+    const fields = [
+      "house_Infrastructure",
+      "economic_agglomeration",
+      "economic_strength",
+      "employment",
+      "social_infrastructure",
+      "urban_mobility",
+      "urban_form",
+      "health",
+      "education",
+      "safety_and_security",
+      "public_space",
+      "economic_equity", 
+      "social_inclusion",
+      "gender_inclusion",
+      "urban_diversity",
+      "air_quality",
+      "waste_management",
+      "sustainable_energy",
+      "participation",
+      "municipal_financing_and_institutional_capacity",
+      "governance_of_urbanization",
+      "ict"
+    ];
+    
+    let sum = 0;
+    let count = 0;
+    
+    fields.forEach(field => {
+      const value = data[field];
+      if (typeof value === 'number' && !isNaN(value)) {
+        sum += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '-';
+    const average = Number((sum / count).toFixed(2));
+    
+    // Update the CPI value in calculationData
+    if (data) {
+      data.cpi = average;
+      data.cpi_comment = getComment(average);
+    }
+    
+    return average;
+  };
+
   useEffect(() => {
     const fetchCalculationHistory = async () => {
       if (!isLoaded || !userId) return;
@@ -932,6 +1000,7 @@ export default function ContentTable() {
             const municipalFinancingAvg = calculateMunicipalFinancingAverage(data[0]);
             const governanceAvg = calculateGovernanceAverage(data[0]);
             const ictAvg = calculateICTAverage(data[0]);
+            const cpiAvg = calculateCPI(data[0]);
             
             data[0].house_Infrastructure = houseInfraAvg;
             data[0].economic_strength = economicStrengthAvg;
@@ -955,6 +1024,32 @@ export default function ContentTable() {
             data[0].municipal_financing_and_institutional_capacity = municipalFinancingAvg;
             data[0].governance_of_urbanization = governanceAvg;
             data[0].ict = ictAvg;
+            data[0].cpi = cpiAvg;
+
+            // Apply comments based on scores
+            data[0].house_Infrastructure_comment = getComment(houseInfraAvg);
+            data[0].economic_strength_comment = getComment(economicStrengthAvg);
+            data[0].economic_agglomeration_comment = getComment(economicAgglomerationAvg);
+            data[0].employment_comment = getComment(employmentAvg);
+            data[0].social_infrastructure_comment = getComment(socialInfrastructureAvg);
+            data[0].urban_mobility_comment = getComment(urbanMobilityAvg);
+            data[0].urban_form_comment = getComment(urbanFormAvg);
+            data[0].health_comment = getComment(healthAvg);
+            data[0].education_comment = getComment(educationAvg);
+            data[0].safety_and_security_comment = getComment(safetyAndSecurityAvg);
+            data[0].public_space_comment = getComment(publicSpaceAvg);
+            data[0].economic_equity_comment = getComment(economicEquityAvg);
+            data[0].social_inclusion_comment = getComment(socialInclusionAvg);
+            data[0].gender_inclusion_comment = getComment(genderInclusionAvg);
+            data[0].urban_diversity_comment = getComment(urbanDiversityAvg);
+            data[0].air_quality_comment = getComment(airQualityAvg);
+            data[0].waste_management_comment = getComment(wasteManagementAvg);
+            data[0].sustainable_energy_comment = getComment(sustainableEnergyAvg);
+            data[0].participation_comment = getComment(participationAvg);
+            data[0].municipal_financing_and_institutional_capacity_comment = getComment(municipalFinancingAvg);
+            data[0].governance_of_urbanization_comment = getComment(governanceAvg);
+            data[0].ict_comment = getComment(ictAvg);
+            data[0].cpi_comment = getComment(cpiAvg);
             
             setCalculationData(data[0]);
 
@@ -980,15 +1075,16 @@ export default function ContentTable() {
     fetchCalculationHistory();
   }, [isLoaded, userId]);
 
-  const formatValue = (value: number | null | undefined) => {
-    if (value === null || value === undefined) return '-';
-    return typeof value === 'number' ? value.toFixed(2) : '-';
-  };
+  const formatValue = (value: string | number | null | undefined) => {
+      if (value === null || value === undefined) return '-';
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      return typeof numValue === 'number' && !isNaN(numValue) ? numValue.toFixed(2) : '-';
+    };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    const tableColumn = ["Category", "Fields", "Description", "Value"];
-    const tableRows: (string | number)[][] = [];
+    const tableColumn = ["Category", "Fields", "Description", "Value", "Evaluation"];
+    const tableRows: (string | number | null)[][] = [];
 
     // Add circular logo and title to first page only
     const logoSize = 25;
@@ -1004,7 +1100,8 @@ export default function ContentTable() {
           category.name,
           field.name,
           field.description,
-          calculationData ? formatValue(calculationData[field.name]) : '-'
+          calculationData ? formatValue(calculationData[field.name]) : '-',
+          calculationData ? calculationData[`${field.name}_comment`] || '-' : '-'
         ];
         tableRows.push(rowData);
       });
@@ -1014,11 +1111,17 @@ export default function ContentTable() {
       head: [tableColumn], 
       body: tableRows, 
       startY: 40,
-      didDrawPage: function(data) {
-        // Only add title on subsequent pages
-        if (data.pageNumber > 1) {
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(16);
+      styles: {
+        font: "helvetica",
+        fontSize: 8
+      },
+      // Highlight CPI row
+      didParseCell: (data) => {
+        // Check if the cell is in a row that belongs to Overall CPI category
+        if (Array.isArray(data.row.raw) && data.row.raw.length > 0 && data.row.raw[0] === "Overall CPI") {
+          data.cell.styles.fillColor = [230, 240, 255];
+          data.cell.styles.textColor = [0, 0, 128];
+          data.cell.styles.fontStyle = 'bold';
         }
       }
     });
@@ -1032,7 +1135,8 @@ export default function ContentTable() {
         Category: category.name,
         Fields: field.name,
         Description: field.description,
-        Value: calculationData ? formatValue(calculationData[field.name]) : '-'
+        Value: calculationData ? formatValue(calculationData[field.name]) : '-',
+        Evaluation: calculationData ? calculationData[`${field.name}_comment`] || '-' : '-'
       }))
     ).flat();
 
@@ -1077,9 +1181,7 @@ export default function ContentTable() {
 
       {/* Export Buttons */}
       <div className="flex flex-col items-center gap-4 mb-4">
-        <div className="bg-blue-100 p-4 rounded-lg shadow-md">
-          
-        </div>
+        
         <div className="flex gap-4">
           <button 
             onClick={exportToPDF}
@@ -1113,35 +1215,70 @@ export default function ContentTable() {
               <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">
                 Value
               </th>
+              <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                Evaluation
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {categories.map((category) => (
               <React.Fragment key={category.name}>
-                {category.fields.map((field, fieldIndex) => (
-                  <tr 
-                    key={`${category.name}-${field.name}`}
-                    className={fieldIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
-                  >
-                    {fieldIndex === 0 && (
-                      <td 
-                        className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                        rowSpan={category.fields.length}
-                      >
-                        {category.name}
+                {category.fields.map((field, fieldIndex) => {
+                  const isCPI = category.name === "Overall CPI";
+                  return (
+                    <tr 
+                      key={`${category.name}-${field.name}`}
+                      className={
+                        isCPI
+                          ? "bg-gradient-to-r from-blue-50 to-blue-100 shadow-md hover:shadow-lg transition-all duration-300"
+                          : fieldIndex % 2 === 0
+                          ? "bg-gray-50"
+                          : "bg-white"
+                      }
+                    >
+                      {fieldIndex === 0 && (
+                        <td 
+                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                            isCPI
+                              ? "text-blue-800 text-xl font-bold"
+                              : "text-gray-900"
+                          }`}
+                          rowSpan={category.fields.length}
+                        >
+                          {category.name}
+                        </td>
+                      )}
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                        isCPI
+                          ? "text-blue-800 font-semibold text-lg"
+                          : "text-gray-500"
+                      }`}>
+                        {field.name}
                       </td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {field.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {field.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {calculationData ? formatValue(calculationData[field.name]) : '-'}
-                    </td>
-                  </tr>
-                ))}
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                        isCPI
+                          ? "text-blue-800 font-semibold text-lg"
+                          : "text-gray-500"
+                      }`}>
+                        {field.description}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                        isCPI
+                          ? "text-blue-800 font-bold text-xl"
+                          : "text-gray-500"
+                      }`}>
+                        {calculationData ? formatValue(calculationData[field.name]) : '-'}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                        isCPI
+                          ? "text-blue-800 font-bold text-lg bg-blue-50 rounded-lg shadow-inner"
+                          : "text-gray-500"
+                      }`}>
+                        {calculationData ? calculationData[`${field.name}_comment`] || '-' : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </React.Fragment>
             ))}
           </tbody>

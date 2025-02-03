@@ -10,14 +10,23 @@ const SubnationalDebtIndicator: React.FC = () => {
   const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const xStar = 60; // Benchmark value (60%)
+  const X_STAR = 60; // Benchmark value (60%)
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const debt = parseFloat(totalDebt.toString());
     const revenue = parseFloat(totalRevenue.toString());
 
@@ -26,33 +35,29 @@ const SubnationalDebtIndicator: React.FC = () => {
       return;
     }
 
+    // Calculate debt ratio
     const debtRatio = (debt / revenue) * 100;
 
+    // Standardize the value
     let standardized;
-    if (debtRatio >= 2 * xStar) {
+    if (debtRatio >= 2 * X_STAR) {
       standardized = 0;
-    } else if (debtRatio > xStar && debtRatio < 2 * xStar) {
+    } else if (debtRatio > X_STAR && debtRatio < 2 * X_STAR) {
       standardized =
-        100 * (1 - Math.abs((debtRatio - xStar) / (2 * xStar - xStar)));
+        100 * (1 - Math.abs((debtRatio - X_STAR) / (2 * X_STAR - X_STAR)));
     } else {
       standardized = 100;
     }
     setStandardizedValue(standardized);
 
-    // Decision Logic
-    let decisionText;
-    if (debtRatio >= 2 * xStar) {
-      decisionText = "Poor";
-    } else if (debtRatio <= xStar) {
-      decisionText = "Excellent";
-    } else {
-      decisionText = "Moderate";
-    }
-    setDecision(decisionText);
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       subnational_debt: debtRatio,
+      subnational_debt_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -65,9 +70,11 @@ const SubnationalDebtIndicator: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -83,7 +90,7 @@ const SubnationalDebtIndicator: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Subnational Debt Indicator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Total Existing Debt:
@@ -122,9 +129,22 @@ const SubnationalDebtIndicator: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Standardized Value: {standardizedValue.toFixed(2)}
           </h2>
-          <h2 className="text-xl font-semibold">
-            Decision: {decision}
-          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

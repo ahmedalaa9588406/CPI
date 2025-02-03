@@ -7,9 +7,19 @@ const PM25Concentration: React.FC = () => {
   const { user, isLoaded } = useUser();
   const [pm25Concentration, setPm25Concentration] = useState<number | string>(""); // Input: PM2.5 concentration
   const [standardizedScore, setStandardizedScore] = useState<string | null>(null); // Standardized score
-  const [evaluation, setEvaluation] = useState<string | null>(null); // Decision evaluation
+  const [comment, setComment] = useState<string | null>(null); // Comment based on score
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
   const BENCHMARK = 10; // Benchmark for PM2.5 concentration (X*)
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   // Function to calculate PM2.5 score
   const calculatePM25Score = () => {
@@ -22,19 +32,21 @@ const PM25Concentration: React.FC = () => {
 
     // Standardization formula with absolute value
     let standardizedValue = 0;
+
     if (pm25Value >= 20) {
       standardizedValue = 0;
-      setEvaluation("Poor");
     } else if (pm25Value >= 10 && pm25Value < 20) {
       standardizedValue = 100 * (1 - Math.abs((pm25Value - BENCHMARK) / 10));
-      setEvaluation("Moderate");
     } else if (pm25Value <= 10) {
       standardizedValue = 100;
-      setEvaluation("Excellent");
     }
 
-    setStandardizedScore(standardizedValue.toFixed(2));
-    return standardizedValue.toFixed(2);
+    const scoreNum = standardizedValue.toFixed(2);
+    setStandardizedScore(scoreNum);
+    const calculatedComment = getComment(parseFloat(scoreNum));
+    setComment(calculatedComment); // Set comment immediately after calculating score
+    console.log('Calculated Score:', scoreNum, 'Calculated Comment:', calculatedComment);
+    return { scoreNum, calculatedComment };
   };
 
   // Function to handle calculation and saving data
@@ -44,15 +56,20 @@ const PM25Concentration: React.FC = () => {
       return;
     }
 
-    const score = calculatePM25Score();
-    if (score === null) return; // Exit if calculation fails
+    const calculationResult = calculatePM25Score();
+    if (calculationResult === null) return; // Exit if calculation fails
 
+    const { scoreNum, calculatedComment } = calculationResult;
     const pm25Value = parseFloat(pm25Concentration.toString());
 
     try {
       setIsSubmitting(true);
+
+      console.log('Before Posting:', 'Score:', scoreNum, 'Comment:', calculatedComment);
+
       const postData = {
-        pm25_concentration: pm25Value, // Post PM2.5 concentration
+        pm25_concentration: pm25Value,
+        pm25_concentration_comment: calculatedComment, // Use the calculated comment
         userId: user.id,
       };
 
@@ -116,7 +133,7 @@ const PM25Concentration: React.FC = () => {
             Standardized Score: {standardizedScore}
           </h3>
           <h3 className="text-lg">
-            Evaluation: {evaluation}
+            Comment: {comment}
           </h3>
         </div>
       )}

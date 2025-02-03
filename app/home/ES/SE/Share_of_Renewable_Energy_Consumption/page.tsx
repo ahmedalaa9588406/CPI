@@ -7,8 +7,18 @@ const ShareOfRenewableEnergy: React.FC = () => {
   const { user, isLoaded } = useUser();
   const [shareOfRenewableEnergy, setShareOfRenewableEnergy] = useState<number | string>(""); // Input for SRE
   const [standardizedScore, setStandardizedScore] = useState<string | null>(null); // Final standardized score
-  const [decision, setDecision] = useState<string | null>(null); // Decision based on the score
+  const [comment, setComment] = useState<string | null>(null); // Comment based on score
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   // Function to calculate standardized score
   const calculateScore = () => {
@@ -25,23 +35,22 @@ const ShareOfRenewableEnergy: React.FC = () => {
     }
 
     let score: number;
-    let decisionComment: string;
 
-    // Calculate standardized score and decision
+    // Calculate standardized score
     if (SRE >= 20) {
       score = 100;
-      decisionComment = "Excellent";
     } else if (SRE > 0 && SRE < 20) {
       score = (SRE / 20) * 100;
-      decisionComment = "Moderate";
     } else {
       score = 0;
-      decisionComment = "Poor";
     }
 
-    setStandardizedScore(score.toFixed(2)); // Limit to 2 decimal places
-    setDecision(decisionComment); // Set decision comment
-    return score.toFixed(2);
+    const scoreNum = score.toFixed(2); // Limit to 2 decimal places
+    setStandardizedScore(scoreNum);
+    const calculatedComment = getComment(parseFloat(scoreNum));
+    setComment(calculatedComment); // Set comment based on score
+    console.log('Calculated Score:', scoreNum, 'Calculated Comment:', calculatedComment);
+    return { scoreNum, calculatedComment };
   };
 
   // Function to handle calculation and saving data
@@ -51,15 +60,20 @@ const ShareOfRenewableEnergy: React.FC = () => {
       return;
     }
 
-    const score = calculateScore();
-    if (score === null) return; // Exit if calculation fails
+    const calculationResult = calculateScore();
+    if (calculationResult === null) return; // Exit if calculation fails
 
+    const { scoreNum, calculatedComment } = calculationResult;
     const SRE = parseFloat(shareOfRenewableEnergy.toString());
 
     try {
       setIsSubmitting(true);
+
+      console.log('Before Posting:', 'Score:', scoreNum, 'Comment:', calculatedComment);
+
       const postData = {
         share_of_renewable_energy: SRE, // Post Share of Renewable Energy
+        share_of_renewable_energy_comment: calculatedComment, // Use the calculated comment
         userId: user.id,
       };
 
@@ -117,13 +131,13 @@ const ShareOfRenewableEnergy: React.FC = () => {
         {isSubmitting ? 'Calculating and Saving...' : 'Calculate and Save'}
       </button>
 
-      {standardizedScore !== null && decision !== null && (
+      {standardizedScore !== null && comment !== null && (
         <div className="mt-4">
           <h3 className="text-lg">
             Standardized Score: <span className="font-bold">{standardizedScore}%</span>
           </h3>
           <p className="text-lg font-semibold">
-            Decision: <span className="text-blue-500">{decision}</span>
+            Comment: <span className="text-blue-500">{comment}</span>
           </p>
         </div>
       )}

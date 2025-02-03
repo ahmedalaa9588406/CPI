@@ -16,20 +16,27 @@ function AffordabilityOfTransportForm() {
   const maxBenchmark = 26; // Maximum affordability benchmark in %
   const tripsPerMonth = 60; // Number of trips per month
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericCostPerTrip = parseFloat(averageCostPerTrip);
     const numericIncome = parseFloat(averageIncome);
-
     if (isNaN(numericCostPerTrip) || isNaN(numericIncome)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
-
     if (numericCostPerTrip <= 0 || numericIncome <= 0) {
       alert("Both average cost per trip and average income must be positive numbers.");
       return;
@@ -52,18 +59,14 @@ function AffordabilityOfTransportForm() {
     }
     setStandardizedScore(standardizedScoreValue);
 
-    // Decision based on the standardized score
-    if (affordabilityValue >= maxBenchmark) {
-      setDecision("Transport is Not Affordable");
-    } else if (affordabilityValue < minBenchmark) {
-      setDecision("Transport is Highly Affordable");
-    } else {
-      setDecision("Transport is Moderately Affordable");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedScoreValue);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       affordability_of_transport: affordabilityValue,
+      affordability_of_transport_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -76,9 +79,11 @@ function AffordabilityOfTransportForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -96,7 +101,7 @@ function AffordabilityOfTransportForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Affordability of Transport Calculator
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Average Cost per Trip (in local currency):
@@ -145,11 +150,11 @@ function AffordabilityOfTransportForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Transport is Not Affordable"
-                  ? "bg-red-500"
-                  : decision === "Transport is Highly Affordable"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : "bg-yellow-500"
+                  : decision === "SOLID"
+                  ? "bg-yellow-500"
+                  : "bg-red-500"
               }`}
             >
               {decision}

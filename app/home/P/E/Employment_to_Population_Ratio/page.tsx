@@ -11,15 +11,25 @@ const EmploymentToPopulationRatioCalculator: React.FC = () => {
   const [decision, setDecision] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
+  // Constants
   const min = 30.5; // Minimum benchmark
   const max = 75.0; // Maximum benchmark
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     if (!workingAgePopulation || workingAgePopulation === 0) {
       alert("Working age population cannot be zero.");
       return;
@@ -42,18 +52,14 @@ const EmploymentToPopulationRatioCalculator: React.FC = () => {
     }
     setStandardizedEpr(standardized);
 
-    // Decision Logic
-    if (ratio >= max) {
-      setDecision("Good");
-    } else if (ratio > min && ratio < max) {
-      setDecision("Moderate");
-    } else {
-      setDecision("Bad");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       employment_to_population_ratio: ratio,
+      employment_to_population_ratio_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -66,9 +72,11 @@ const EmploymentToPopulationRatioCalculator: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -86,7 +94,7 @@ const EmploymentToPopulationRatioCalculator: React.FC = () => {
       <h1 className="text-3xl font-bold mb-6 text-center">
         Employment to Population Ratio (EPR) Calculator
       </h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Total Number of Employed People:
@@ -132,9 +140,9 @@ const EmploymentToPopulationRatioCalculator: React.FC = () => {
             Decision:{" "}
             <span
               className={`${
-                decision === "Good"
+                decision === "VERY SOLID"
                   ? "text-green-600"
-                  : decision === "Moderate"
+                  : decision === "SOLID"
                   ? "text-yellow-600"
                   : "text-red-600"
               }`}

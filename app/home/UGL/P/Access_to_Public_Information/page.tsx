@@ -10,6 +10,16 @@ const AccessToPublicInfo: React.FC = () => {
   const [transparencyLevel, setTransparencyLevel] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const handleCheckboxChange = (element: string) => {
     setSelectedElements((prev) =>
       prev.includes(element)
@@ -23,24 +33,18 @@ const AccessToPublicInfo: React.FC = () => {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numberOfSelected = selectedElements.length;
     const score = (numberOfSelected / totalElements) * 100;
     setAccessScore(score);
 
-    let transparencyText;
-    if (score === 100) {
-      transparencyText = "High Transparency";
-    } else if (score >= 50) {
-      transparencyText = "Moderate Transparency";
-    } else {
-      transparencyText = "Low Transparency";
-    }
-    setTransparencyLevel(transparencyText);
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(score);
+    setTransparencyLevel(evaluationComment);
 
     // Prepare data to send
     const postData = {
       access_to_public_information: score,
+      access_to_public_information_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -53,9 +57,11 @@ const AccessToPublicInfo: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -71,7 +77,7 @@ const AccessToPublicInfo: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h2 className="text-2xl font-bold mb-4">Access to Local Public Information</h2>
-      
+
       <p className="mb-4">
         Does the E-government website possess the following elements? Select all that apply:
       </p>
@@ -113,9 +119,22 @@ const AccessToPublicInfo: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Access Score: {accessScore.toFixed(2)}%
           </h2>
-          <h2 className="text-xl font-semibold">
-            Transparency Level: {transparencyLevel}
-          </h2>
+          {transparencyLevel && (
+            <h2 className="text-xl font-semibold">
+              Transparency Level:{" "}
+              <span
+                className={`${
+                  transparencyLevel === "VERY SOLID"
+                    ? "text-green-600"
+                    : transparencyLevel === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {transparencyLevel}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

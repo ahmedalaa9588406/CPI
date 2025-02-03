@@ -13,19 +13,26 @@ function AverageDailyTravelTimeForm() {
   // Constants
   const X = 30; // Benchmark average travel time in minutes
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericAverageTravelTime = Number(averageTravelTime);
-
     if (isNaN(numericAverageTravelTime)) {
       alert("Please enter a valid number for average travel time.");
       return;
     }
-
     if (numericAverageTravelTime < 0) {
       alert("Average travel time must be a non-negative number.");
       return;
@@ -37,25 +44,21 @@ function AverageDailyTravelTimeForm() {
       standardizedTravelTime = 0; // If travel time >= 2 * X
     } else if (numericAverageTravelTime > X) {
       standardizedTravelTime =
-        100 * (1 - (numericAverageTravelTime - X) / (X - 30));
+        100 * (1 - (numericAverageTravelTime - X) / (X));
     } else {
       standardizedTravelTime = 100; // If travel time <= X
     }
     setStandardizedTime(standardizedTravelTime);
     setResult(numericAverageTravelTime.toFixed(2));
 
-    // Determine the decision message
-    if (numericAverageTravelTime >= 2 * X) {
-      setDecision("Very Poor Travel Time");
-    } else if (numericAverageTravelTime > X) {
-      setDecision("Moderate Travel Time");
-    } else {
-      setDecision("Optimal Travel Time");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedTravelTime);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      average_daily_travel_time: numericAverageTravelTime,      
+      average_daily_travel_time: numericAverageTravelTime,
+      average_daily_travel_time_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -68,9 +71,11 @@ function AverageDailyTravelTimeForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -88,7 +93,7 @@ function AverageDailyTravelTimeForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Calculate Average Daily Travel Time
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Average Daily Travel Time (in minutes):
@@ -120,11 +125,11 @@ function AverageDailyTravelTimeForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Optimal Travel Time"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Very Poor Travel Time"
-                  ? "bg-red-500"
-                  : "bg-yellow-500"
+                  : decision === "SOLID"
+                  ? "bg-yellow-500"
+                  : "bg-red-500"
               }`}
             >
               {decision}

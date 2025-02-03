@@ -15,50 +15,56 @@ function PublicTransportForm() {
   const MIN = 5.95; // Minimum value from benchmark
   const MAX = 62.16; // Maximum value from benchmark
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericTotalTrips = Number(totalMotorizedTrips);
     if (numericTotalTrips <= 0) {
       alert("Total motorized trips must be greater than zero.");
       return;
     }
-
     const numericTripsInPTModes = Number(tripsInPTModes);
     if (isNaN(numericTripsInPTModes) || isNaN(numericTotalTrips)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
 
+    // Calculate Use of Public Transport Ratio
     const calculatedPTRatio = (numericTripsInPTModes / numericTotalTrips) * 100;
     setUsePTRatio(calculatedPTRatio);
 
-    let standardizedPTRatio: number;
+    // Standardized PT Ratio Calculation
+    let standardizedPTRatioValue: number;
     if (calculatedPTRatio >= MAX) {
-      standardizedPTRatio = 100;
+      standardizedPTRatioValue = 100;
     } else if (calculatedPTRatio < MIN) {
-      standardizedPTRatio = 0;
+      standardizedPTRatioValue = 0;
     } else {
-      standardizedPTRatio =
+      standardizedPTRatioValue =
         100 * ((calculatedPTRatio - MIN) / (MAX - MIN));
     }
-    setStandardizedPTRatio(standardizedPTRatio);
+    setStandardizedPTRatio(standardizedPTRatioValue);
 
-    // Determine decision message
-    if (calculatedPTRatio >= MAX) {
-      setDecision("Perfect");
-    } else if (calculatedPTRatio > MIN && calculatedPTRatio < MAX) {
-      setDecision("Moderate");
-    } else {
-      setDecision("Poor");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedPTRatioValue);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       use_of_public_transport: calculatedPTRatio,
+      use_of_public_transport_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -71,9 +77,11 @@ function PublicTransportForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -91,7 +99,7 @@ function PublicTransportForm() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Calculate Use of Public Transport
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Number of Trips in Public Transport Modes:
@@ -135,9 +143,9 @@ function PublicTransportForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Perfect"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Moderate"
+                  : decision === "SOLID"
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}

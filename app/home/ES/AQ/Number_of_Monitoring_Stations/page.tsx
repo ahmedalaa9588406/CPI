@@ -9,7 +9,7 @@ const PM10MonitoringStations: React.FC = () => {
   const [pm10Level, setPm10Level] = useState<string>(""); // Input: PM10 Level
   const [numStations, setNumStations] = useState<number | string>(""); // Input: Number of monitoring stations
   const [standardizedScore, setStandardizedScore] = useState<string | null>(null); // Standardized score
-  const [evaluation, setEvaluation] = useState<string | null>(null); // Decision evaluation
+  const [comment, setComment] = useState<string | null>(null); // Comment based on score
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
   // Validate inputs
@@ -38,6 +38,16 @@ const PM10MonitoringStations: React.FC = () => {
     }
 
     return true;
+  };
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
   };
 
   // Calculate standardized score
@@ -69,19 +79,21 @@ const PM10MonitoringStations: React.FC = () => {
 
     // Calculate standardized score
     let standardizedValue = 0;
+
     if (stationsNum >= max) {
       standardizedValue = 100;
-      setEvaluation("Excellent");
     } else if (stationsNum > min && stationsNum < max) {
       standardizedValue = (stationsNum / max) * 100;
-      setEvaluation("Moderate");
     } else if (stationsNum === min) {
       standardizedValue = 0;
-      setEvaluation("Poor");
     }
 
-    setStandardizedScore(standardizedValue.toFixed(2));
-    return standardizedValue.toFixed(2);
+    const scoreNum = standardizedValue.toFixed(2);
+    setStandardizedScore(scoreNum);
+    const calculatedComment = getComment(parseFloat(scoreNum));
+    setComment(calculatedComment); // Set comment immediately after calculating score
+    console.log('Calculated Score:', scoreNum, 'Calculated Comment:', calculatedComment);
+    return { scoreNum, calculatedComment };
   };
 
   // Handle calculation and saving data
@@ -91,19 +103,27 @@ const PM10MonitoringStations: React.FC = () => {
       return;
     }
 
-    const score = calculateMonitoringStations();
-    if (score === null) return; // Exit if calculation fails
+    const calculationResult = calculateMonitoringStations();
+    if (calculationResult === null) return;
 
+    const { scoreNum, calculatedComment } = calculationResult;
     const stationsNum = parseFloat(numStations.toString());
 
     try {
       setIsSubmitting(true);
+
       const postData = {
-        num_stations: stationsNum, // Only post the number of monitoring stations
-        userId: user.id,
+        number_of_monitoring_stations: stationsNum || 0,
+        number_of_monitoring_stations_comment: calculatedComment || "",
+        userId: user.id
       };
 
-      const response = await fetch('/api/monitoring-stations-history', {
+      // Validate postData before sending
+      if (!postData.userId || postData.number_of_monitoring_stations === null) {
+        throw new Error("Invalid data for submission");
+      }
+
+      const response = await fetch('/api/calculation-history', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,7 +215,7 @@ const PM10MonitoringStations: React.FC = () => {
             Standardized Score: {standardizedScore}
           </h3>
           <h3 className="text-lg">
-            Evaluation: {evaluation}
+            Comment: {comment}
           </h3>
         </div>
       )}

@@ -15,22 +15,42 @@ function ImprovedWaterForm() {
   const MIN = 50;
   const MAX = 100;
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateImprovedWater = async () => {
     if (!user) {
       alert("Please sign in to save calculations");
       return;
     }
-
     const numericTotalHouseholds = Number(totalHouseholds);
     if (numericTotalHouseholds > 0) {
       const numericDurableHouseholds = Number(durableHouseholds);
       const improvedWater = (numericDurableHouseholds / numericTotalHouseholds) * 100;
-
       let standardizedImprovedWater = 100 * ((improvedWater - MIN) / (MAX - MIN));
       standardizedImprovedWater = Math.min(Math.max(standardizedImprovedWater, 0), 100);
 
+      // Update state with results
       setImprovedWaterS(standardizedImprovedWater);
       setResult(improvedWater.toFixed(2));
+
+      // Evaluate the decision based on the standardized score
+      const evaluationComment = getComment(standardizedImprovedWater);
+      setDecision(evaluationComment);
+
+      // Prepare data to send
+      const postData = {
+        improved_water: improvedWater,
+        improved_water_comment: evaluationComment,
+        userId: user.id,
+      };
 
       try {
         setIsSubmitting(true);
@@ -39,26 +59,20 @@ function ImprovedWaterForm() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            improved_water: improvedWater,
-            userId: user.id
-          }),
+          body: JSON.stringify(postData),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to store data');
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        // Set decision after successful save
-        if (standardizedImprovedWater > 50) {
-          setDecision("Perfect");
-        } else {
-          setDecision("Bad");
-        }
-
-      } catch (error) {
-        console.error('Error storing data:', error);
-        alert('Failed to store the calculation result');
+        const result = await response.json();
+        console.log('Result:', result);
+        alert("Data calculated and saved successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('Error saving data:', errorMessage);
+        alert("Failed to save data. Please try again.");
       } finally {
         setIsSubmitting(false);
       }
@@ -117,10 +131,10 @@ function ImprovedWaterForm() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Perfect"
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Bad"
-                  ?  "bg-red-500"
+                  : decision === "SOLID"
+                  ? "bg-yellow-500"
                   : "bg-red-500"
               }`}
             >

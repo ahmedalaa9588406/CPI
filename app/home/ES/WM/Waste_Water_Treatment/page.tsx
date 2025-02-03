@@ -8,7 +8,18 @@ const WastewaterTreatment: React.FC = () => {
   const [sewageTreated, setSewageTreated] = useState<number | string>(""); // Volume of sewage treated
   const [sewageProduced, setSewageProduced] = useState<number | string>(""); // Total volume of sewage produced
   const [treatmentScore, setTreatmentScore] = useState<string | null>(null); // Final score
+  const [comment, setComment] = useState<string | null>(null); // Comment based on score
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   // Function to calculate wastewater treatment score
   const calculateWastewaterTreatment = () => {
@@ -32,8 +43,12 @@ const WastewaterTreatment: React.FC = () => {
 
     // Formula: Wastewater treatment (%) = (sewage treated / sewage produced) * 100
     const score = (treated / produced) * 100;
-    setTreatmentScore(score.toFixed(2)); // Limit to 2 decimal places
-    return score; // Return the score for posting
+    const scoreNum = score.toFixed(2); // Limit to 2 decimal places
+    setTreatmentScore(scoreNum);
+    const calculatedComment = getComment(parseFloat(scoreNum));
+    setComment(calculatedComment); // Set comment based on score
+    console.log('Calculated Score:', scoreNum, 'Calculated Comment:', calculatedComment);
+    return { scoreNum, calculatedComment };
   };
 
   // Function to handle calculation and saving data
@@ -43,15 +58,18 @@ const WastewaterTreatment: React.FC = () => {
       return;
     }
 
-    const score = calculateWastewaterTreatment();
-    if (score === null) return; // Exit if calculation fails
+    const calculationResult = calculateWastewaterTreatment();
+    if (calculationResult === null) return; // Exit if calculation fails
+
+    const { scoreNum, calculatedComment } = calculationResult;
 
     try {
       setIsSubmitting(true); // Start loading
       console.log("Submitting data...");
 
       const postData = {
-        waste_water_treatment: score, // Post the wastewater treatment score
+        waste_water_treatment: parseFloat(scoreNum), // Post the wastewater treatment score
+        waste_water_treatment_comment: calculatedComment, // Use the calculated comment
         userId: user.id,
       };
 
@@ -129,11 +147,14 @@ const WastewaterTreatment: React.FC = () => {
         {isSubmitting ? 'Calculating and Saving...' : 'Calculate and Save'}
       </button>
 
-      {treatmentScore !== null && (
+      {treatmentScore !== null && comment !== null && (
         <div className="mt-4">
           <h3 className="text-lg">
-            Wastewater Treatment Score: {treatmentScore}%
+            Wastewater Treatment Score: <span className="font-bold">{treatmentScore}%</span>
           </h3>
+          <p className="text-lg font-semibold">
+            Comment: <span className="text-blue-500">{comment}</span>
+          </p>
         </div>
       )}
     </div>

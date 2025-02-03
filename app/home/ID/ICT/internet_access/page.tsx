@@ -2,12 +2,28 @@
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
 
-function InternetAccessForm() {
+const InternetAccessForm: React.FC = () => {
   const { user, isLoaded } = useUser();
   const [internetHouseholds, setInternetHouseholds] = useState<string>("");
   const [totalHouseholds, setTotalHouseholds] = useState<string>("");
   const [result, setResult] = useState<string | null>(null);
+  const [standardizedRate, setStandardizedRate] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // Constants for benchmarks and thresholds
+  const MIN = 0; // Min = 0%
+  const MAX = 100; // Max = 100%
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
@@ -20,20 +36,31 @@ function InternetAccessForm() {
       alert("Total households must be greater than zero.");
       return;
     }
-
     const numericInternetHouseholds = Number(internetHouseholds);
     if (isNaN(numericInternetHouseholds) || isNaN(numericTotalHouseholds)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
 
+    // Calculate internet access percentage
     const internetAccess =
       (numericInternetHouseholds / numericTotalHouseholds) * 100;
+
+    // Standardized formula with absolute value
+    const standardizedValue =
+      100 * (1 - Math.abs((internetAccess - MAX) / (MAX - MIN)));
+
+    // Decision logic using getComment function
+    const evaluationComment: string = getComment(standardizedValue);
+
     setResult(internetAccess.toFixed(2));
+    setStandardizedRate(standardizedValue.toFixed(2));
+    setEvaluation(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      internet_access:internetAccess,
+      internet_access: internetAccess,
+      internet_access_comment: evaluationComment,
       userId: user.id,
     };
 
@@ -46,9 +73,11 @@ function InternetAccessForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -103,10 +132,12 @@ function InternetAccessForm() {
       {result !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">
           <p className="text-lg">Internet Access: {result}%</p>
+          <p className="text-lg">Standardized Rate: {standardizedRate}%</p>
+          <p className="text-lg">Evaluation: {evaluation}</p>
         </div>
       )}
     </div>
   );
-}
+};
 
 export default InternetAccessForm;

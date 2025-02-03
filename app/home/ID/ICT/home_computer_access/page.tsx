@@ -2,12 +2,28 @@
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
 
-function HomeComputerAccessForm() {
+const HomeComputerAccessForm: React.FC = () => {
   const { user, isLoaded } = useUser();
   const [computerHouseholds, setComputerHouseholds] = useState<string>("");
   const [totalHouseholds, setTotalHouseholds] = useState<string>("");
   const [result, setResult] = useState<string | null>(null);
+  const [standardizedRate, setStandardizedRate] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // Constants for benchmarks and thresholds
+  const MIN = 0; // Min = 0%
+  const MAX = 100; // Max = 100%
+
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
@@ -20,20 +36,31 @@ function HomeComputerAccessForm() {
       alert("Total households must be greater than zero.");
       return;
     }
-
     const numericComputerHouseholds = Number(computerHouseholds);
     if (isNaN(numericComputerHouseholds) || isNaN(numericTotalHouseholds)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
 
+    // Calculate home computer access percentage
     const computerAccess =
       (numericComputerHouseholds / numericTotalHouseholds) * 100;
+
+    // Standardized formula with absolute value
+    const standardizedValue =
+      100 * (1 - Math.abs((computerAccess - MAX) / (MAX - MIN)));
+
+    // Decision logic using getComment function
+    const evaluationComment: string = getComment(standardizedValue);
+
     setResult(computerAccess.toFixed(2));
+    setStandardizedRate(standardizedValue.toFixed(2));
+    setEvaluation(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      home_computer_access:computerAccess,
+      home_computer_access: computerAccess,
+      home_computer_access_comment: evaluationComment,
       userId: user.id,
     };
 
@@ -46,9 +73,11 @@ function HomeComputerAccessForm() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -103,10 +132,12 @@ function HomeComputerAccessForm() {
       {result !== null && (
         <div className="mt-4 p-4 bg-gray-100 rounded">
           <p className="text-lg">Home Computer Access: {result}%</p>
+          <p className="text-lg">Standardized Rate: {standardizedRate}%</p>
+          <p className="text-lg">Evaluation: {evaluation}</p>
         </div>
       )}
     </div>
   );
-}
+};
 
 export default HomeComputerAccessForm;

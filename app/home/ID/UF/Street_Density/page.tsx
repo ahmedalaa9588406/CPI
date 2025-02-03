@@ -14,20 +14,27 @@ function StreetDensityCalculator() {
   // Constants
   const BENCHMARK = 20; // Benchmark density value (km/km²)
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const numericTotalUrbanStreets = parseFloat(totalUrbanStreets);
     const numericTotalUrbanSurface = parseFloat(totalUrbanSurface);
-
     if (isNaN(numericTotalUrbanStreets) || isNaN(numericTotalUrbanSurface)) {
       alert("Please enter valid numbers for both fields.");
       return;
     }
-
     if (numericTotalUrbanStreets <= 0 || numericTotalUrbanSurface <= 0) {
       alert(
         "Both total length of urban streets and total urban surface must be positive numbers."
@@ -54,18 +61,14 @@ function StreetDensityCalculator() {
     }
     setStandardizedScore(standardizedScoreValue);
 
-    // Decision
-    if (streetDensity === 0 || streetDensity >= 2 * BENCHMARK) {
-      setDecision("Invalid street density (boundary condition).");
-    } else if (streetDensity > 0 && streetDensity < 2 * BENCHMARK) {
-      setDecision("Street density is within acceptable range.");
-    } else {
-      setDecision("Street density meets the benchmark.");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedScoreValue);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       street_density: streetDensity,
+      street_density_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -78,9 +81,11 @@ function StreetDensityCalculator() {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -98,7 +103,7 @@ function StreetDensityCalculator() {
       <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Street Density Calculator
       </h1>
-      
+
       <div className="mb-4">
         <label className="block text-gray-700 text-sm font-bold mb-2">
           Total Length of Urban Streets (in km):
@@ -147,9 +152,9 @@ function StreetDensityCalculator() {
           {decision && (
             <p
               className={`mt-4 p-2 text-center font-bold text-white rounded-md ${
-                decision === "Street density meets the benchmark."
+                decision === "VERY SOLID"
                   ? "bg-green-500"
-                  : decision === "Street density is within acceptable range."
+                  : decision === "SOLID"
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}

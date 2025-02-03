@@ -7,14 +7,28 @@ const AccessibilityToOpenPublicArea: React.FC = () => {
   const [population, setPopulation] = useState<string>(""); // Input: total city population
   const [lessThan400mPopulation, setLessThan400mPopulation] = useState<string>(""); // Input: population within 400m of open public area
   const [accessibilityRate, setAccessibilityRate] = useState<number | null>(null);
+  const [standardizedScore, setStandardizedScore] = useState<number | null>(null);
+  const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  const MIN_RATE = 50; // Minimum benchmark
+  const MAX_RATE = 100; // Maximum benchmark
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const populationValue = parseFloat(population);
     const lessThan400mPopulationValue = parseFloat(lessThan400mPopulation);
 
@@ -27,9 +41,26 @@ const AccessibilityToOpenPublicArea: React.FC = () => {
     const rate = (100 * lessThan400mPopulationValue) / populationValue;
     setAccessibilityRate(rate);
 
+    // Standardize the accessibility rate score
+    let standardized;
+    if (rate >= MAX_RATE) {
+      standardized = 100;
+    } else if (rate <= MIN_RATE) {
+      standardized = 0;
+    } else {
+      standardized =
+        100 * ((rate - MIN_RATE) / (MAX_RATE - MIN_RATE));
+    }
+    setStandardizedScore(standardized);
+
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
+
     // Prepare data to send
     const postData = {
       accessibility_to_open_public_areas: rate,
+      accessibility_to_open_public_areas_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -42,9 +73,11 @@ const AccessibilityToOpenPublicArea: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -60,7 +93,7 @@ const AccessibilityToOpenPublicArea: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Accessibility to Open Public Area</h1>
-      
+
       <div className="mb-4">
         <label className="block mb-2 font-semibold">Total Population:</label>
         <input
@@ -95,6 +128,25 @@ const AccessibilityToOpenPublicArea: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Accessibility Rate: {accessibilityRate.toFixed(2)}%
           </h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Standardized Score: {standardizedScore?.toFixed(2)}
+          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

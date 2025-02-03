@@ -13,6 +13,16 @@ const WomenInWorkforce: React.FC = () => {
   // Benchmark
   const BENCHMARK = 50; // X* = 50%
 
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
@@ -40,27 +50,16 @@ const WomenInWorkforce: React.FC = () => {
     const standardizedValue =
       100 * (1 - Math.abs((workforcePercentage - BENCHMARK) / BENCHMARK));
 
-    // Decision logic
-    let standardizedRateValue: number = 0;
-    let evaluationComment: string = "Bad";
+    // Get the comment based on the standardized value
+    const evaluationComment = getComment(standardizedValue);
 
-    if (workforcePercentage === 0 || workforcePercentage >= 2 * BENCHMARK) {
-      standardizedRateValue = 0;
-      evaluationComment = "Bad";
-    } else if (workforcePercentage > 0 && workforcePercentage < 2 * BENCHMARK) {
-      standardizedRateValue = standardizedValue;
-      evaluationComment = "Average";
-    } else if (workforcePercentage === BENCHMARK) {
-      standardizedRateValue = 100;
-      evaluationComment = "Good";
-    }
-
-    setStandardizedRate(standardizedRateValue.toFixed(2));
+    setStandardizedRate(standardizedValue.toFixed(2));
     setEvaluation(evaluationComment);
 
     // Prepare data to send
     const postData = {
-      women_in_local_work_force:workforcePercentage,
+      women_in_local_work_force: workforcePercentage,
+      women_in_local_work_force_comment: evaluationComment,
       userId: user.id,
     };
 
@@ -73,9 +72,11 @@ const WomenInWorkforce: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");

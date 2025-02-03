@@ -9,15 +9,24 @@ const DaysToStartBusiness: React.FC = () => {
   const [decision, setDecision] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
-  const min = 2;
-  const max = 208;
+  const MIN_DAYS = 2; // Minimum benchmark
+  const MAX_DAYS = 208; // Maximum benchmark
+
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
 
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     const days = parseFloat(daysToStart.toString());
 
     if (isNaN(days) || days <= 0) {
@@ -26,8 +35,8 @@ const DaysToStartBusiness: React.FC = () => {
     }
 
     const lnDays = Math.log(days);
-    const lnMin = Math.log(min);
-    const lnMax = Math.log(max);
+    const lnMin = Math.log(MIN_DAYS);
+    const lnMax = Math.log(MAX_DAYS);
     const lnDifference = lnMax - lnMin;
 
     if (lnDifference === 0) {
@@ -35,30 +44,25 @@ const DaysToStartBusiness: React.FC = () => {
       return;
     }
 
-    let standardizedValue;
-    if (lnDays >= 5.34) {
-      standardizedValue = 0;
-    } else if (lnDays <= 0.69) {
-      standardizedValue = 100;
+    // Standardize the value
+    let standardized;
+    if (lnDays >= lnMax) {
+      standardized = 0;
+    } else if (lnDays <= lnMin) {
+      standardized = 100;
     } else {
-      standardizedValue = 100 * (1 - (lnDays - lnMin) / lnDifference);
+      standardized = 100 * (1 - (lnDays - lnMin) / lnDifference);
     }
-    setStandardizedValue(standardizedValue);
+    setStandardizedValue(standardized);
 
-    // Decision Logic
-    let decisionText;
-    if (lnDays >= 5.34) {
-      decisionText = "Poor";
-    } else if (lnDays <= 0.69) {
-      decisionText = "Excellent";
-    } else {
-      decisionText = "Moderate";
-    }
-    setDecision(decisionText);
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       days_to_start_a_business: days,
+      days_to_start_a_business_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -71,9 +75,11 @@ const DaysToStartBusiness: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -89,7 +95,7 @@ const DaysToStartBusiness: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Days to Start a Business Calculator</h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Days to Start a Business:
@@ -116,9 +122,22 @@ const DaysToStartBusiness: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">
             Standardized Value: {standardizedValue.toFixed(2)}
           </h2>
-          <h2 className="text-xl font-semibold">
-            Decision: {decision}
-          </h2>
+          {decision && (
+            <h2 className="text-xl font-semibold">
+              Decision:{" "}
+              <span
+                className={`${
+                  decision === "VERY SOLID"
+                    ? "text-green-600"
+                    : decision === "SOLID"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {decision}
+              </span>
+            </h2>
+          )}
         </div>
       )}
     </div>

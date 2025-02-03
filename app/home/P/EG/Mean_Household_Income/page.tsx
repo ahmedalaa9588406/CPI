@@ -13,12 +13,21 @@ const MeanHouseholdIncomeApp: React.FC = () => {
   const minIncome = 6315; // Minimum income
   const maxIncome = 44773; // Maximum income
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     if (!householdIncome || householdIncome <= 0) {
       alert("Please enter a valid household income greater than zero.");
       return;
@@ -31,18 +40,14 @@ const MeanHouseholdIncomeApp: React.FC = () => {
         (Math.log(maxIncome) - Math.log(minIncome)));
     setStandardizedIncome(standardized);
 
-    // Decision logic
-    if (householdIncome >= maxIncome) {
-      setDecision("Good");
-    } else if (householdIncome > minIncome && householdIncome < maxIncome) {
-      setDecision("Moderate");
-    } else {
-      setDecision("Bad");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardized);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       mean_household_income: householdIncome,
+      mean_household_income_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -55,9 +60,11 @@ const MeanHouseholdIncomeApp: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -74,7 +81,9 @@ const MeanHouseholdIncomeApp: React.FC = () => {
     // Fetch the values from localStorage and calculate the economic strength
     const cityProductPerCapita = parseFloat(localStorage.getItem("cityProductPerCapita") || "0");
     const oldAgeDependencyRatio = parseFloat(localStorage.getItem("oldAgeDependencyRatio") || "0");
-    const values = [cityProductPerCapita, oldAgeDependencyRatio, householdIncome ?? 0].filter((value): value is number => value > 0);
+    const values = [cityProductPerCapita, oldAgeDependencyRatio, householdIncome ?? 0].filter(
+      (value): value is number => value > 0
+    );
     const average = values.reduce((acc: number, value: number) => acc + value, 0) / values.length;
     setEconomicStrength(average);
   }, [householdIncome]);
@@ -82,7 +91,7 @@ const MeanHouseholdIncomeApp: React.FC = () => {
   return (
     <div className="max-w-md mx-auto p-5 bg-white shadow-md rounded-lg">
       <h1 className="text-2xl font-bold mb-4">Mean Household Income Calculator</h1>
-      
+
       <div className="mb-4">
         <label className="block mb-2 font-semibold">
           Enter Mean Household Income (US$):
@@ -109,7 +118,20 @@ const MeanHouseholdIncomeApp: React.FC = () => {
           <h2 className="text-lg font-semibold">
             Standardized Income: {standardizedIncome.toFixed(2)}
           </h2>
-          <h2 className="text-lg font-semibold">Decision: {decision}</h2>
+          <h2 className="text-lg font-semibold">
+            Decision:{" "}
+            <span
+              className={`font-bold ${
+                decision === "VERY SOLID"
+                  ? "text-green-600"
+                  : decision === "SOLID"
+                  ? "text-yellow-600"
+                  : "text-red-600"
+              }`}
+            >
+              {decision}
+            </span>
+          </h2>
           <h2 className="text-lg font-semibold">Economic Strength: {economicStrength.toFixed(2)}</h2>
         </div>
       )}

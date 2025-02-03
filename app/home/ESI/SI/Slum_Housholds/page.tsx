@@ -14,6 +14,16 @@ const SlumHouseholdsStandardization: React.FC = () => {
   const MIN = 0; // Min = 0%
   const MAX = 80; // Max = 80%
 
+  // Function to get comment based on standardized score
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
@@ -35,7 +45,7 @@ const SlumHouseholdsStandardization: React.FC = () => {
     }
 
     // Slum Households calculation
-    const slumHouseholds = 100*(slumPopValue / cityPopValue) ;
+    const slumHouseholds = 100 * (slumPopValue / cityPopValue);
 
     // Standardized formula with absolute value
     let standardizedValue: number = 0;
@@ -46,7 +56,7 @@ const SlumHouseholdsStandardization: React.FC = () => {
       evaluationComment = "Bad";
     } else if (slumHouseholds > MIN && slumHouseholds < MAX) {
       standardizedValue = 100 * (1 - (slumHouseholds - MIN) / (MAX - MIN));
-      evaluationComment = "Average";
+      evaluationComment = getComment(standardizedValue);
     } else if (slumHouseholds === MIN) {
       standardizedValue = 100;
       evaluationComment = "Good";
@@ -57,7 +67,8 @@ const SlumHouseholdsStandardization: React.FC = () => {
 
     // Prepare data to send
     const postData = {
-      slums_households:slumHouseholds,
+      slums_households: slumHouseholds,
+      slums_households_comment: evaluationComment,
       userId: user.id,
     };
 
@@ -70,9 +81,11 @@ const SlumHouseholdsStandardization: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");

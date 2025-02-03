@@ -13,17 +13,25 @@ const HerfindahlHirschmanIndex: React.FC = () => {
   const [decision, setDecision] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
 
+  // Add getComment function for evaluation
+  const getComment = (score: number) => {
+    if (score >= 80) return "VERY SOLID";
+    else if (score >= 70) return "SOLID";
+    else if (score >= 60) return "MODERATELY SOLID";
+    else if (score >= 50) return "MODERATELY WEAK";
+    else if (score >= 40) return "WEAK";
+    else return "VERY WEAK";
+  };
+
   const calculateAndSave = async () => {
     if (!isLoaded || !user) {
       alert("User not authenticated. Please log in.");
       return;
     }
-
     if (!numberOfIndustries || numberOfIndustries <= 0) {
       alert("Please enter a valid number of industries.");
       return;
     }
-
     // Parse industry shares
     const shares = industryShares
       .split(",")
@@ -33,20 +41,16 @@ const HerfindahlHirschmanIndex: React.FC = () => {
       alert("Number of industries must match the number of shares entered.");
       return;
     }
-
     // Calculate H Index
     const h = shares.reduce((sum, share) => sum + Math.pow(share, 2), 0);
     setHIndex(h);
-
     // Calculate Normalized H*
     const normalizedH = (h - 1 / numberOfIndustries) / (1 - 1 / numberOfIndustries);
     setNormalizedHIndex(normalizedH);
-
     // Calculate Benchmark X*
     const xStar =
       (0.25 - 1 / numberOfIndustries) / (1 - 1 / numberOfIndustries);
     setBenchmark(xStar);
-
     // Calculate Standardized H(S) with absolute value in both numerator and denominator
     let standardizedH =
       100 *
@@ -57,16 +61,14 @@ const HerfindahlHirschmanIndex: React.FC = () => {
     if (standardizedH > 100) standardizedH = 100; // Cap the value at 100
     setStandardizedHIndex(standardizedH);
 
-    // Decision Logic
-    if (normalizedH >= xStar) {
-      setDecision("High Concentration");
-    } else {
-      setDecision("Low Concentration");
-    }
+    // Evaluate the decision based on the standardized score
+    const evaluationComment = getComment(standardizedH);
+    setDecision(evaluationComment);
 
     // Prepare data to send
     const postData = {
       economic_specialization: h,
+      economic_specialization_comment: evaluationComment, // Renamed for consistency
       userId: user.id,
     };
 
@@ -79,9 +81,11 @@ const HerfindahlHirschmanIndex: React.FC = () => {
         },
         body: JSON.stringify(postData),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
       const result = await response.json();
       console.log('Result:', result);
       alert("Data calculated and saved successfully!");
@@ -99,7 +103,7 @@ const HerfindahlHirschmanIndex: React.FC = () => {
       <h1 className="text-3xl font-bold mb-6 text-center">
         Herfindahl-Hirschman Index Calculator
       </h1>
-      
+
       <div className="mb-6">
         <label className="block mb-3 text-lg font-semibold">
           Number of Industries (N):
@@ -151,9 +155,11 @@ const HerfindahlHirschmanIndex: React.FC = () => {
             Decision:{" "}
             <span
               className={`${
-                decision === "High Concentration"
-                  ? "text-red-600"
-                  : "text-green-600"
+                decision === "VERY SOLID"
+                  ? "text-green-600"
+                  : decision === "SOLID"
+                  ? "text-yellow-600"
+                  : "text-red-600"
               }`}
             >
               {decision}
