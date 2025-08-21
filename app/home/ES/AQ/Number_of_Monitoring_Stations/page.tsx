@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
+import { AIDataAssistant } from '@/components/AIDataAssistant';
 
 const PM10MonitoringStations: React.FC = () => {
   const { user, isLoaded } = useUser();
@@ -197,6 +198,23 @@ const PM10MonitoringStations: React.FC = () => {
           aria-label="Enter number of monitoring stations"
         />
       </div>
+
+      {/* AI Data Assistant for enhanced data collection */}
+      <AIDataAssistant
+        indicator="number_of_monitoring_stations"
+        currentValue={numStations ? parseFloat(numStations.toString()) : undefined}
+        onSuggestionAccept={(value) => setNumStations(value)}
+        availableData={{
+          population: population ? parseFloat(population.toString()) : 0,
+          pm25_concentration: pm10Level === "greater_or_equal_48" ? 48 : 
+                             pm10Level === "between_32_and_48" ? 40 : 25
+        }}
+        location={{
+          lat: 30.0444, // Example coordinates for Cairo, Egypt
+          lng: 31.2357,
+          city: "Cairo"
+        }}
+      />
 
       <button
         onClick={handleCalculateAndSave}

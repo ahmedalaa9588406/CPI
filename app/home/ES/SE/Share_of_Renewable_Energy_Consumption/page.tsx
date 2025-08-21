@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
+import { AIDataAssistant } from '@/components/AIDataAssistant';
 
 const ShareOfRenewableEnergy: React.FC = () => {
   const { user, isLoaded } = useUser();
@@ -119,6 +120,22 @@ const ShareOfRenewableEnergy: React.FC = () => {
           aria-label="Enter Share of Renewable Energy percentage"
         />
       </div>
+
+      {/* AI Data Assistant for renewable energy data */}
+      <AIDataAssistant
+        indicator="share_of_renewable_energy"
+        currentValue={shareOfRenewableEnergy ? parseFloat(shareOfRenewableEnergy.toString()) : undefined}
+        onSuggestionAccept={(value) => setShareOfRenewableEnergy(value)}
+        availableData={{
+          co2_emissions: 5.5, // Example baseline CO2 emissions
+          pm25_concentration: 25 // Example PM2.5 concentration
+        }}
+        location={{
+          lat: 30.0444, // Example coordinates for Cairo, Egypt
+          lng: 31.2357,
+          city: "Cairo"
+        }}
+      />
 
       <button
         onClick={handleCalculateAndSave}
