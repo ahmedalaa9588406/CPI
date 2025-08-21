@@ -105,6 +105,12 @@ type CalculationHistoryData = {
   // Governance
   land_use_efficiency?: number;
   governance_of_urbanization?: number;
+  // AI Enhancement Fields
+  ai_data_quality_score?: number;
+  ai_enhanced_fields?: string[];
+  data_sources_used?: string;
+  prediction_confidence?: number;
+  last_ai_update?: Date;
 };
 
 // Function to post data to the CalculationHistory table

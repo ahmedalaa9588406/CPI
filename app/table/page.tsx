@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { DataQualityIndicators } from '@/components/ai';
 
 type Category = {
   name: string;
@@ -1181,6 +1182,11 @@ export default function ContentTable() {
 
       {/* Export Buttons */}
       <div className="flex flex-col items-center gap-4 mb-4">
+        
+        {/* AI Data Quality Indicators */}
+        <div className="w-full max-w-6xl px-4">
+          <DataQualityIndicators userId={userId} />
+        </div>
         
         <div className="flex gap-4">
           <button 

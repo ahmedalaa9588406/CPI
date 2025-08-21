@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { useUser } from '@clerk/nextjs';
+import { useAIEnhancedCalculation } from '@/lib/hooks/useAIEnhancedCalculation';
+import { AIEnhancementPanel } from '@/components/ai';
 
 const GreenAreaPerCapitaStandardization: React.FC = () => {
   const { user, isLoaded } = useUser();
@@ -9,6 +11,9 @@ const GreenAreaPerCapitaStandardization: React.FC = () => {
   const [standardizedRate, setStandardizedRate] = useState<number | null>(null);
   const [decision, setDecision] = useState<string | null>(null); // Decision evaluation
   const [isSubmitting, setIsSubmitting] = useState(false); // Loading state
+
+  // AI Enhancement Hook
+  const { aiData, getAIEnhancement, getAIPrediction } = useAIEnhancedCalculation('green_area_per_capita');
 
   const BENCHMARK = 15; // X* = 15 m²/hab based on WHO suggestion
 
@@ -20,6 +25,25 @@ const GreenAreaPerCapitaStandardization: React.FC = () => {
     else if (score >= 50) return "MODERATELY WEAK";
     else if (score >= 40) return "WEAK";
     else return "VERY WEAK";
+  };
+
+  // AI Enhancement handlers
+  const handleAIEnhancement = async () => {
+    const cityLocation = { lat: 40.7128, lon: -74.0060 }; // Example: NYC coordinates
+    const existingData = {
+      population: population ? parseFloat(population) : null,
+      total_green_area: totalGreenArea ? parseFloat(totalGreenArea) : null
+    };
+    await getAIEnhancement(cityLocation, existingData);
+  };
+
+  const handleAIPrediction = async () => {
+    const availableData = {
+      population: population ? parseFloat(population) : null,
+      land_use_mix: 0.7, // Example proxy data
+      urban_density: 5000 // Example proxy data
+    };
+    await getAIPrediction(availableData);
   };
 
   const calculateGreenAreaPerCapita = async () => {
@@ -134,6 +158,14 @@ const GreenAreaPerCapitaStandardization: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* AI Enhancement Panel */}
+      <AIEnhancementPanel
+        aiData={aiData}
+        onGetAIEnhancement={handleAIEnhancement}
+        onGetAIPrediction={handleAIPrediction}
+        canPredict={!!population} // Can predict if we have population data
+      />
     </div>
   );
 };

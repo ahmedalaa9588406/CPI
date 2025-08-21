@@ -231,6 +231,14 @@ model CalculationHistory {
 
   cpi                    Float?
   cpi_comment            String?
+  
+  // AI-Enhanced Data Tracking
+  ai_data_quality_score  Float?
+  ai_enhanced_fields     String[] // JSON array of fields enhanced by AI
+  data_sources_used      String?  // JSON object of data sources used
+  prediction_confidence  Float?   // Overall confidence score for AI predictions
+  last_ai_update         DateTime?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
